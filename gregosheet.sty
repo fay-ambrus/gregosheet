@@ -1,0 +1,41 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{gregosheet}[2025/01/01 Custom sheet music]
+
+\RequirePackage{fontspec}
+\RequirePackage{luacode}
+\RequirePackage{xparse}
+
+% Load music font (replace with your actual font)
+\newfontfamily\MusicFont{guidohu_.ttf}
+
+% Internal storage
+\ExplSyntaxOn
+\tl_new:N \g_gregosheet_melody_tl
+\tl_new:N \g_gregosheet_lyrics_tl
+\ExplSyntaxOff
+
+% User commands
+\NewDocumentCommand{\melody}{m}{
+  \ExplSyntaxOn
+  \tl_set:Nn \g_gregosheet_melody_tl {#1}
+  \ExplSyntaxOff
+}
+
+\NewDocumentCommand{\lyrics}{m}{
+  \ExplSyntaxOn
+  \tl_set:Nn \g_gregosheet_lyrics_tl {#1}
+  \ExplSyntaxOff
+}
+
+% Environment
+\NewDocumentEnvironment{gregosheet}{}{
+  % begin
+}{
+  % end: call Lua renderer
+  \directlua{
+    gregosheet.render(
+      "\luaescapestring{\g_gregosheet_melody_tl}",
+      "\luaescapestring{\g_gregosheet_lyrics_tl}"
+    )
+  }
+}
