@@ -5,37 +5,34 @@
 \RequirePackage{luacode}
 \RequirePackage{xparse}
 
+% Load Lua module
+\directlua{require("gregosheet")}
+
 % Load music font (replace with your actual font)
 \newfontfamily\MusicFont{guidohu_.ttf}
 
-% Internal storage
+% Internal storage and commands
 \ExplSyntaxOn
 \tl_new:N \g_gregosheet_melody_tl
 \tl_new:N \g_gregosheet_lyrics_tl
-\ExplSyntaxOff
 
-% User commands
 \NewDocumentCommand{\melody}{m}{
-  \ExplSyntaxOn
-  \tl_set:Nn \g_gregosheet_melody_tl {#1}
-  \ExplSyntaxOff
+  \tl_gset:Nn \g_gregosheet_melody_tl {#1}
 }
 
 \NewDocumentCommand{\lyrics}{m}{
-  \ExplSyntaxOn
-  \tl_set:Nn \g_gregosheet_lyrics_tl {#1}
-  \ExplSyntaxOff
+  \tl_gset:Nn \g_gregosheet_lyrics_tl {#1}
 }
 
-% Environment
 \NewDocumentEnvironment{gregosheet}{}{
   % begin
 }{
   % end: call Lua renderer
   \directlua{
     gregosheet.render(
-      "\luaescapestring{\g_gregosheet_melody_tl}",
-      "\luaescapestring{\g_gregosheet_lyrics_tl}"
+      "\luaescapestring{\tl_use:N \g_gregosheet_melody_tl}",
+      "\luaescapestring{\tl_use:N \g_gregosheet_lyrics_tl}"
     )
   }
 }
+\ExplSyntaxOff
