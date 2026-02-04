@@ -8,8 +8,17 @@
 % Load Lua module
 \directlua{require("gregosheet")}
 
-% Load music font (replace with your actual font)
+% Load fonts (user-defined)
 \newfontfamily\MusicFont{guidohu_.ttf}
+\newfontfamily\LyricsFont{Cambria}
+
+% Capture font IDs in Lua
+{\MusicFont\fontsize{20}{24}\selectfont
+  \directlua{gregosheet.music_fontid = font.current()}
+}
+{\LyricsFont\fontsize{10}{12}\selectfont
+  \directlua{gregosheet.lyrics_fontid = font.current()}
+}
 
 % Internal storage and commands
 \ExplSyntaxOn
@@ -26,10 +35,13 @@
 
 \NewDocumentEnvironment{gregosheet}{}{
   % begin
+  \catcode`\_=12
+  \catcode`\^=12
+  \catcode`\$=12
 }{
-  % end: call Lua renderer
+  % end: call Lua main function
   \directlua{
-    gregosheet.render(
+    gregosheet.main(
       "\luaescapestring{\tl_use:N \g_gregosheet_melody_tl}",
       "\luaescapestring{\tl_use:N \g_gregosheet_lyrics_tl}"
     )
