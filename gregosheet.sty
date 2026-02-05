@@ -10,13 +10,13 @@
 
 % Load fonts (user-defined)
 \newfontfamily\MusicFont{guidohu_.ttf}
-\newfontfamily\LyricsFont{Cambria}
+\newfontfamily\LyricFont{Cambria}
 
 % Capture font IDs in Lua
 {\MusicFont\fontsize{20}{24}\selectfont
   \directlua{gregosheet.music_fontid = font.current()}
 }
-{\LyricsFont\fontsize{10}{12}\selectfont
+{\LyricFont\fontsize{10}{12}\selectfont
   \directlua{gregosheet.lyrics_fontid = font.current()}
 }
 
