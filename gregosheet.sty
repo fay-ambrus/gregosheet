@@ -6,7 +6,13 @@
 \RequirePackage{xparse}
 
 % Load Lua module
-\directlua{require("gregosheet")}
+\directlua{
+  require("gregosheet.common")
+  require("gregosheet.parser")
+  require("gregosheet.spacing")
+  require("gregosheet.render")
+  require("gregosheet.main")
+}
 
 % Load fonts (user-defined)
 \newfontfamily\MusicFont{guidohu_.ttf}
