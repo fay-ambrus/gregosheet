@@ -7,24 +7,21 @@
 
 % Load Lua module
 \directlua{
-  require("gregosheet.common")
-  require("gregosheet.parser")
-  require("gregosheet.spacing")
-  require("gregosheet.render")
-  require("gregosheet.main")
+  require("gregosheet/gregosheet.common")
+  require("gregosheet/gregosheet.parser")
+  require("gregosheet/gregosheet.spacing")
+  require("gregosheet/gregosheet.render")
+  require("gregosheet/gregosheet.main")
 }
 
 % Load fonts (user-defined)
 \newfontfamily\MusicFont{guidohu_.ttf}
-\newfontfamily\LyricFont{Cambria}
 
 % Capture font IDs in Lua
 {\MusicFont\fontsize{20}{24}\selectfont
   \directlua{gregosheet.music_fontid = font.current()}
 }
-{\LyricFont\fontsize{10}{12}\selectfont
-  \directlua{gregosheet.lyrics_fontid = font.current()}
-}
+% Lyric font ID will be captured after \lyricfont is defined by user
 
 % Internal storage and commands
 \ExplSyntaxOn
@@ -41,9 +38,14 @@
 
 \NewDocumentEnvironment{gregosheet}{}{
   % begin
+  \vskip\blockvskip
   \catcode`\_=12
   \catcode`\^=12
   \catcode`\$=12
+  % Capture lyric font ID after user styles are loaded
+  {\lyricfont\fontsize{10}{12}\selectfont
+    \directlua{gregosheet.lyrics_fontid = font.current()}
+  }
 }{
   % end: call Lua main function
   \directlua{
