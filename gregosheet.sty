@@ -27,6 +27,7 @@
 \ExplSyntaxOn
 \tl_new:N \g_gregosheet_melody_tl
 \tl_new:N \g_gregosheet_lyrics_tl
+\tl_new:N \g_gregosheet_tone_tl
 
 \NewDocumentCommand{\melody}{m}{
   \tl_gset:Nn \g_gregosheet_melody_tl {#1}
@@ -36,8 +37,9 @@
   \tl_gset:Nn \g_gregosheet_lyrics_tl {#1}
 }
 
-\NewDocumentEnvironment{gregosheet}{}{
+\NewDocumentEnvironment{gregosheet}{O{}}{
   % begin
+  \keys_set:nn { gregosheet } { #1 }
   \vskip\blockvskip
   \catcode`\_=12
   \catcode`\^=12
@@ -51,8 +53,14 @@
   \directlua{
     gregosheet.main(
       "\luaescapestring{\tl_use:N \g_gregosheet_melody_tl}",
-      "\luaescapestring{\tl_use:N \g_gregosheet_lyrics_tl}"
+      "\luaescapestring{\tl_use:N \g_gregosheet_lyrics_tl}",
+      "\luaescapestring{\tl_use:N \g_gregosheet_tone_tl}"
     )
   }
+  \tl_gclear:N \g_gregosheet_tone_tl
+}
+
+\keys_define:nn { gregosheet } {
+  tone .tl_set:N = \g_gregosheet_tone_tl
 }
 \ExplSyntaxOff

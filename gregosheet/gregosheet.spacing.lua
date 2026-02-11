@@ -174,7 +174,7 @@ local function is_lyric_overfull(lyric)
   return lyric.start_sp + lyric.width_sp > tex.dimen["textwidth"]
 end
 
-function gregosheet.spacing_compute(melody, lyrics)
+function gregosheet.spacing_compute(melody, lyrics, tone)
   gregosheet.init_delimiter_widths()
 
   local space_width_sp = gregosheet.measure_width_sp(" ", gregosheet.lyrics_fontid)
@@ -210,8 +210,8 @@ function gregosheet.spacing_compute(melody, lyrics)
     local lyric = lyrics[lyric_index]
     local previous_lyric = system.lyrics[#system.lyrics]
 
-    if token.type == "note" then
-      -- Place lyric under notes
+    if token.type == "note" or (token.type == "barline" and lyric and lyric.text == "*") then
+      -- Place lyric under notes or * under barline.
       if lyric then
         -- Compute the starting position of the lyric
         local token_pos = calculate_horizontal_position(system)
@@ -283,7 +283,6 @@ function gregosheet.spacing_compute(melody, lyrics)
         -- More spacing is needed in the last delimiter
         local old_width = token.width_sp
         recompute_delimiter_width(token, gap_to_page_end_sp, "max")
-        texio.write_nl(string.format("Recomputing delimiter width at page end: old_sp=%.0f, target_sp=%.0f new_sp=%.0f", old_width, gap_to_page_end_sp, token.width_sp))
       elseif token.type == "barline" then
         -- Push the last note to the new system
         local last_note_idx = find_last_token_before_note(system, "note")
@@ -313,6 +312,23 @@ function gregosheet.spacing_compute(melody, lyrics)
       table.insert(system.melody, token)
       melody_idx = melody_idx + 1
     end
+  end
+
+  -- Add tone in last system
+  if tone and tone ~= "" then
+    local last_lyric = system.lyrics[#system.lyrics]
+    local tone_start_sp = 0
+
+    if last_lyric then
+      local last_lyric_end = last_lyric.start_sp + last_lyric.width_sp
+      tone_start_sp = last_lyric_end + space_width_sp * 5
+    end
+
+    system.tone = {
+      tone_str = tone,
+      new_line = tone_start_sp + gregosheet.measure_width_sp(tone, gregosheet.lyrics_fontid) >= calculate_horizontal_position(system),
+      start_sp = tone_start_sp
+    }
   end
 
   table.insert(systems, system)
