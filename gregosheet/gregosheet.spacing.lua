@@ -130,6 +130,10 @@ local function find_or_insert_delimiter(system, note_idx)
     if previous_token and previous_token.type == "symbol" then
       last_delimiter_idx = #system.melody - 1
     end
+    if last_delimiter_idx == 0 then
+      last_delimiter_idx = 1
+      texio.write_nl("Inserting delimiter at position " .. last_delimiter_idx)
+    end
     table.insert(system.melody, last_delimiter_idx, {
       type = "delimiter",
       value = "",
@@ -210,7 +214,7 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
     local lyric = lyrics[lyric_index]
     local previous_lyric = system.lyrics[#system.lyrics]
 
-    if token.type == "note" or (token.type == "barline" and lyric and lyric.text == "*") then
+    if token.type == "note" or (token.type == "barline" and lyric and (lyric.text == "*" or lyric.text == "ANT.")) then
       -- Place lyric under notes or * under barline.
       if lyric then
         -- Compute the starting position of the lyric

@@ -66,15 +66,20 @@ function gregosheet.parse_lyrics(str)
         i = i + 1
       end
 
+      -- Replace underscores with spaces
+      syllable = syllable:gsub("_", " ")
+
       -- Check if next non-space character is hyphen or end of string
       local word_end = (i > #str or str:sub(i, i) == " ")
 
-      table.insert(syllables, {
-        type = "lyric",
-        text = syllable,
-        word_end = word_end,
-        width_sp = gregosheet.measure_width_sp(syllable, gregosheet.lyrics_fontid)
-      })
+      if syllable and syllable ~= ""then
+        table.insert(syllables, {
+          type = "lyric",
+          text = syllable,
+          word_end = word_end,
+          width_sp = gregosheet.measure_width_sp(syllable, gregosheet.lyrics_fontid)
+        })
+      end
     end
   end
 

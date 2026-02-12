@@ -23,7 +23,7 @@ function gregosheet.render(systems)
     tex.sprint("}")
 
     -- Create lyrics line with absolute positioning
-    tex.sprint("\\vskip\\lyricvskip")
+    tex.sprint("\\nopagebreak\\vskip\\lyricvskip")
     tex.sprint("\\hbox to 0pt{")
     tex.sprint("\\fontsize{\\lyricfontsize}{12}\\selectfont\\lyricfont")
 
@@ -31,7 +31,13 @@ function gregosheet.render(systems)
       if lyric.start_sp then
         tex.sprint("\\hbox to 0pt{")
         tex.sprint("\\hskip" .. lyric.start_sp .. "sp")
-        tex.sprint(-2, lyric.text)
+        if lyric.text == "*" or lyric.text == "ANT." then
+          tex.sprint("\\textcolor{red}{")
+          tex.sprint(-2, lyric.text)
+          tex.sprint("}")
+        else
+          tex.sprint(-2, lyric.text)
+        end
         tex.sprint("\\hss}")
       end
     end
