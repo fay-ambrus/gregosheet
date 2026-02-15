@@ -181,6 +181,8 @@ end
 function gregosheet.spacing_compute(melody, lyrics, tone)
   gregosheet.init_delimiter_widths()
 
+  texio.write_nl("DEBUG: spacing_compute called with " .. #melody .. " melody tokens, " .. #lyrics .. " lyrics")
+
   local space_width_sp = gregosheet.measure_width_sp(" ", gregosheet.lyrics_fontid)
   local hyphen_width_sp = gregosheet.measure_width_sp("-", gregosheet.lyrics_fontid)
   local page_width_sp = tex.dimen["textwidth"]
@@ -196,6 +198,8 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
     local token = melody[melody_idx]
     local previous_token = system.melody[#system.melody]
     local lyric_overfull = false
+
+    texio.write_nl("DEBUG: Processing token " .. melody_idx .. ": type=" .. token.type .. " value=" .. tostring(token.value))
 
 
     -- Barlines have default delimiters around them
@@ -213,6 +217,10 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
 
     local lyric = lyrics[lyric_index]
     local previous_lyric = system.lyrics[#system.lyrics]
+
+    if lyric then
+      texio.write_nl("DEBUG: Current lyric " .. lyric_index .. ": text='" .. lyric.text .. "' word_end=" .. tostring(lyric.word_end))
+    end
 
     if token.type == "note" or (token.type == "barline" and lyric and (lyric.text == "*" or lyric.text == "ANT.")) then
       -- Place lyric under notes or * under barline.
@@ -234,6 +242,7 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
         end
 
         if gap_sp < 0 then
+          texio.write_nl("DEBUG: Lyric overlap detected, gap_sp=" .. gap_sp .. ", adjusting delimiter")
           -- More spacing is needed in the last delimiter
           local last_delimiter_idx = find_or_insert_delimiter(system)
           local last_delimiter = system.melody[last_delimiter_idx]
@@ -281,6 +290,7 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
     -- Handle systems
     local horizontal_position_sp = calculate_horizontal_position(system)
     if horizontal_position_sp + token.width_sp > page_width_sp or lyric_overfull then
+      texio.write_nl("DEBUG: System break needed at melody_idx=" .. melody_idx .. ", horizontal_pos=" .. horizontal_position_sp .. ", page_width=" .. page_width_sp)
       local gap_to_page_end_sp = page_width_sp - horizontal_position_sp
       -- Handle different types of previous tokens
       if token.type == "delimiter" then
