@@ -297,14 +297,14 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
         -- More spacing is needed in the last delimiter
         local old_width = token.width_sp
         recompute_delimiter_width(token, gap_to_page_end_sp, "max")
-      elseif token.type == "barline" then
+      -- elseif token.type == "barline" then
         -- Push the last note to the new system
-        local last_note_idx = find_last_token_before_note(system, "note")
-        local delimiter_idx = find_or_insert_delimiter(system, last_note_idx)
-        local delimiter = system.melody[delimiter_idx]
-        local needed_delimiter_width_sp = page_width_sp - delimiter.start_sp
-        recompute_delimiter_width(delimiter, needed_delimiter_width_sp, "max")
-        melody_idx, lyric_idx = rollback_computations_after(system, delimiter_idx)
+        -- local last_note_idx = find_last_token_before_note(system, "note")
+        -- local delimiter_idx = find_or_insert_delimiter(system, last_note_idx)
+        -- local delimiter = system.melody[delimiter_idx]
+        -- local needed_delimiter_width_sp = page_width_sp - delimiter.start_sp
+        -- recompute_delimiter_width(delimiter, needed_delimiter_width_sp, "max")
+        -- melody_idx, lyric_idx = rollback_computations_after(system, delimiter_idx)
       else
         -- There is need for a new finishing delimiter
         table.insert(system.melody, {
