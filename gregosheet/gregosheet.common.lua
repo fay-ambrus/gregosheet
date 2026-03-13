@@ -8,11 +8,36 @@ gregosheet.std_delimiter_sequence = "---"
 gregosheet.tolerable_syllabel_gap_sp = 73000
 
 -- Code tables
-gregosheet.notes = "[ðñ0123456789öüó%^qwertzuiopõúÝÞQWERTZUIOPÕÚÔ×asdfghjkléáûØÙASDFGHJKLÉÁÛ`íyxcvbnmzZŸ¡¢£¥¦©ª«¬àâãäåæçèêëìîï%]%[¨]"
+gregosheet.notes = "[ðñ0123456789öüó%^qwertzuiopõúÝÞQWERTZUIOPÕÚÔasdfghjkléáûØÙASDFGHJKLÉÁÛ`íyxcvbnmzZŸ¡¢£¥¦©ª«¬àâãäåæçèêëìîï%]%[¨~‚ƒ…†‡ˆ‰Š‹Œ‘’]"
 gregosheet.recited_notes = "[%[Ÿ¡¢£¥¦©ª«¬]"
 gregosheet.delimiters = "[%-_*]"
-gregosheet.symbols = "[¼ÿ®−§'\"+!%%/=()ÖÜÓ%sM>#&@{}<¿À÷øÍYXCVBNÈÊËÌÎÏÐÑÒßòôùý]"
+gregosheet.symbols = "[¼ÿ®−§'\"+!%%/=()ÖÜÓ%sM>#&@{}<¿À÷øÍYXCVBNÈÊËÌÎÏÐÑÒßòôùý“”•–—˜™š›œº»]"
 gregosheet.barlines = "[,.?:;]"
+
+-- Convert pattern strings to arrays of UTF-8 codes for more efficient matching
+gregosheet.notes_codes = {}
+gregosheet.delimiters_codes = {}
+gregosheet.symbols_codes = {}
+gregosheet.barlines_codes = {}
+
+-- Helper function to convert pattern string to array of UTF-8 codes
+function pattern_to_codes(pattern)
+  local codes = {}
+  for _, code in utf8.codes(pattern) do
+    table.insert(codes, code)
+  end
+  return codes
+end
+
+-- Helper function to check if a UTF-8 code is in an array of codes
+function code_in_array(code, code_array)
+  for _, c in ipairs(code_array) do
+    if c == code then
+      return true
+    end
+  end
+  return false
+end
 
 -- Measure text width in scaled points
 function gregosheet.measure_width_sp(text, fontid)

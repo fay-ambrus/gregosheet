@@ -9,11 +9,26 @@ function gregosheet.parse_melody(str)
   local note_group = ""
   local last_type = nil
 
-  for char in str:gmatch(".") do
-    if char:match(gregosheet.notes) then
+  -- Initialize the code arrays from the pattern strings
+  if gregosheet.notes then
+    gregosheet.notes_codes = pattern_to_codes(gregosheet.notes)
+  end
+  if gregosheet.delimiters then
+    gregosheet.delimiters_codes = pattern_to_codes(gregosheet.delimiters)
+  end
+  if gregosheet.symbols then
+    gregosheet.symbols_codes = pattern_to_codes(gregosheet.symbols)
+  end
+  if gregosheet.barlines then
+    gregosheet.barlines_codes = pattern_to_codes(gregosheet.barlines)
+  end
+
+  for _, code in utf8.codes(str) do
+    local char = utf8.char(code)
+    if code_in_array(code, gregosheet.notes_codes) then
       note_group = note_group .. char
       last_type = "note"
-    elseif char:match(gregosheet.delimiters) then
+    elseif code_in_array(code, gregosheet.delimiters_codes) then
       if note_group ~= "" then
         table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid)})
         note_group = ""
@@ -22,14 +37,14 @@ function gregosheet.parse_melody(str)
         table.insert(tokens, {type = "delimiter", value = gregosheet.std_delimiter_sequence, width_sp = std_delimiter_sequence_width_sp})
       end
       last_type = "delimiter"
-    elseif char:match(gregosheet.symbols) then
+    elseif code_in_array(code, gregosheet.symbols_codes) then
       if note_group ~= "" then
         table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid)})
         note_group = ""
       end
       table.insert(tokens, {type = "symbol", value = char, width_sp = gregosheet.measure_width_sp(char, music_fontid)})
       last_type = "symbol"
-    elseif char:match(gregosheet.barlines) then
+    elseif code_in_array(code, gregosheet.barlines_codes) then
       if note_group ~= "" then
         table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid)})
         note_group = ""

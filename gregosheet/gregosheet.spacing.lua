@@ -193,6 +193,7 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
   local system = {clef = clef, melody = {}, lyrics = {}}
   local lyric_index = 1
   local melody_idx = 1
+  local out_of_lyrics = false
 
   while melody_idx <= #melody do
     local token = melody[melody_idx]
@@ -215,6 +216,12 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
       end
     end
 
+    -- If we are out of lyrics, delimiters become shorter
+    if token.type == "delimiter" and out_of_lyrics then
+      token.value = "--"
+      token.width_sp = gregosheet.measure_width_sp(token.value, gregosheet.music_fontid)
+    end
+
     local lyric = lyrics[lyric_index]
     local previous_lyric = system.lyrics[#system.lyrics]
 
@@ -222,7 +229,7 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
       texio.write_nl("DEBUG: Current lyric " .. lyric_index .. ": text='" .. lyric.text .. "' word_end=" .. tostring(lyric.word_end))
     end
 
-    if token.type == "note" or (token.type == "barline" and lyric and (lyric.text == "*" or lyric.text == "ANT.")) then
+    if token.type == "note" or (token.type == "barline" and lyric and (lyric.text == "*" or lyric.text == "ANT." or lyric.text == "REF.")) then
       -- Place lyric under notes or * under barline.
       if lyric then
         -- Compute the starting position of the lyric
@@ -249,6 +256,9 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
           recompute_delimiter_width(last_delimiter, last_delimiter.width_sp - gap_sp, "min")
           lyric.start_sp = calculate_lyric_starting_position(lyric, token, system)
         end
+      else
+        out_of_lyrics = true
+        texio.write_nl("DEBUG: Out of lyrics!")
       end
 
       -- Check if lyric is overfull

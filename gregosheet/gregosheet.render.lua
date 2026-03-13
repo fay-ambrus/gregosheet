@@ -31,7 +31,7 @@ function gregosheet.render(systems)
       if lyric.start_sp then
         tex.sprint("\\hbox to 0pt{")
         tex.sprint("\\hskip" .. lyric.start_sp .. "sp")
-        if lyric.text == "*" or lyric.text == "ANT." then
+        if lyric.text == "*" or lyric.text == "ANT." or lyric.text == "REF." then
           tex.sprint("\\textcolor{red}{")
           tex.sprint(-2, lyric.text)
           tex.sprint("}")
