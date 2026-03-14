@@ -90,7 +90,10 @@ function gregosheet.parse_lyrics(str)
       -- Check if next non-space character is hyphen or end of string
       local word_end = (i > #str or str:sub(i, i) == " ")
 
-      if syllable and syllable ~= ""then
+      if syllable and syllable ~= "" then
+        if syllable == "@" then
+          syllable = ""
+        end
         table.insert(syllables, {
           type = "lyric",
           text = syllable,
