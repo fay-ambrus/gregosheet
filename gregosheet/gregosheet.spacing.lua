@@ -194,6 +194,9 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
   local lyric_index = 1
   local melody_idx = 1
   local out_of_lyrics = false
+  local new_system_counter = 0
+  local last_token_idx = 1
+  local system_break = false
 
   while melody_idx <= #melody do
     local token = melody[melody_idx]
@@ -201,7 +204,10 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
     local lyric_overfull = false
 
     texio.write_nl("DEBUG: Processing token " .. melody_idx .. ": type=" .. token.type .. " value=" .. tostring(token.value))
-
+    if last_token_idx ~= melody_idx then
+      new_system_counter = 0
+    end
+    last_token_idx = melody_idx
 
     -- Barlines have default delimiters around them
     if token.type == "barline" then
@@ -217,7 +223,7 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
     end
 
     -- If we are out of lyrics, delimiters become shorter
-    if token.type == "delimiter" and out_of_lyrics then
+    if token.type == "delimiter" and out_of_lyrics and not system_break then
       token.value = "--"
       token.width_sp = gregosheet.measure_width_sp(token.value, gregosheet.music_fontid)
     end
@@ -301,6 +307,13 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
     local horizontal_position_sp = calculate_horizontal_position(system)
     if horizontal_position_sp + token.width_sp > page_width_sp or lyric_overfull then
       texio.write_nl("DEBUG: System break needed at melody_idx=" .. melody_idx .. ", horizontal_pos=" .. horizontal_position_sp .. ", page_width=" .. page_width_sp)
+      system_break = true
+      if new_system_counter < 16 then
+        new_system_counter = new_system_counter + 1
+      else
+        texio.write_nl("ERROR: Too many system breaks, possible infinite loop. Exiting.")
+        os.exit()
+      end
       local gap_to_page_end_sp = page_width_sp - horizontal_position_sp
       -- Handle different types of previous tokens
       if token.type == "delimiter" then
@@ -328,6 +341,7 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
         system = {clef = clef, melody = {}, lyrics = {}}
       end
     else
+      system_break = false
       if lyric and lyric.start_sp then
         table.insert(system.lyrics, lyric)
         token.lyric = lyric_index

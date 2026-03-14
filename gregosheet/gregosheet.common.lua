@@ -8,11 +8,12 @@ gregosheet.std_delimiter_sequence = "---"
 gregosheet.tolerable_syllabel_gap_sp = 73000
 
 -- Code tables
-gregosheet.notes = "[ðñ0123456789öüó%^qwertzuiopõúÝÞQWERTZUIOPÕÚÔasdfghjkléáûØÙASDFGHJKLÉÁÛ`íyxcvbnmzZŸ¡¢£¥¦©ª«¬àâãäåæçèêëìîï%]%[¨~‚ƒ…†‡ˆ‰Š‹Œ‘’]"
-gregosheet.recited_notes = "[%[Ÿ¡¢£¥¦©ª«¬]"
-gregosheet.delimiters = "[%-_*]"
-gregosheet.symbols = "[¼ÿ®−§'\"+!%%/=()ÖÜÓ%sM>#&@{}<¿À÷øÍYXCVBNÈÊËÌÎÏÐÑÒßòôùý“”•–—˜™š›œº»]"
-gregosheet.barlines = "[,.?:;]"
+gregosheet.notes = "[ðñ0123456789öüó^qwertzuiopõúÝÞQWERTZUIOPÕÚÔasdfghjkléáûØÙASDFGHJKLÉÁÛ`íyxcvbnmzZŸ¡¢£¥¦©ª«¬àâãäåæçèêëìîï][¨~‚ƒ…†‡ˆ‰Š‹Œ‘’]"
+gregosheet.recited_notes = "[[Ÿ¡¢£¥¦©ª«¬]"
+gregosheet.delimiters = "[-_*]"
+gregosheet.symbols = "[sM>#&@{}<¿À÷øÍYXCVBNÈÊËÌÎÏÐÑÒßòôùý“”•–—˜™š›œº»]"
+gregosheet.barlines = "[,.?:;¼ÿ®−§'\"+!%/=()ÖÜÓ]"
+
 
 -- Convert pattern strings to arrays of UTF-8 codes for more efficient matching
 gregosheet.notes_codes = {}
