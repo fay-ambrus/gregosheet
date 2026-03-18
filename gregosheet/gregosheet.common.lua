@@ -11,7 +11,7 @@ gregosheet.tolerable_syllabel_gap_sp = 73000
 gregosheet.notes = "[ðñ0123456789öüó^qwertzuiopõúÝÞQWERTZUIOPÕÚÔasdfghjkléáûØÙASDFGHJKLÉÁÛ`íyxcvbnmzZŸ¡¢£¥¦©ª«¬àâãäåæçèêëìîï][¨~‚ƒ…†‡ˆ‰Š‹Œ‘’Ç°±²³´µ¾¸¹]"
 gregosheet.recited_notes = "[[Ÿ¡¢£¥¦©ª«¬]"
 gregosheet.delimiters = "[-_*]"
-gregosheet.symbols = "[sM>#&@{}<¿À÷øÍYXCVBNÈÊËÌÎÏÐÑÒßòôùý“”•–—˜™š›œº»]"
+gregosheet.symbols = "[sM>#&@{}<¿À÷øÍYXCVBNÈÊËÌÎÏÐÑÒßòôþùý“”•–—˜™š›œº»]"
 gregosheet.barlines = "[,.?:;¼ÿ®−§'\"+!%/=()ÖÜÓ]"
 
 

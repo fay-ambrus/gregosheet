@@ -91,6 +91,11 @@ function gregosheet.parse_lyrics(str)
       local word_end = (i > #str or str:sub(i, i) == " ")
 
       if syllable and syllable ~= "" then
+        local comment = false
+        if syllable:sub(1, 1) == "<" and syllable:sub(-1) == ">" then
+          comment = true
+          syllable = syllable:sub(2, -2)
+        end
         if syllable == "@" then
           syllable = ""
         end
@@ -98,6 +103,7 @@ function gregosheet.parse_lyrics(str)
           type = "lyric",
           text = syllable,
           word_end = word_end,
+          comment = comment,
           width_sp = gregosheet.measure_width_sp(syllable, gregosheet.lyrics_fontid)
         })
       end
