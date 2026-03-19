@@ -26,34 +26,32 @@ function gregosheet.parse_melody(str)
   for _, code in utf8.codes(str) do
     local char = utf8.char(code)
     print("DEBUG: Processing char: " .. char .. " (code: " .. code .. ")")
-    if char ~= '\\' then
-      if code_in_array(code, gregosheet.notes_codes) then
-        note_group = note_group .. char
-        last_type = "note"
-      elseif code_in_array(code, gregosheet.delimiters_codes) then
-        if note_group ~= "" then
-          table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid)})
-          note_group = ""
-        end
-        if last_type ~= "delimiter" then
-          table.insert(tokens, {type = "delimiter", value = gregosheet.std_delimiter_sequence, width_sp = std_delimiter_sequence_width_sp})
-        end
-        last_type = "delimiter"
-      elseif code_in_array(code, gregosheet.symbols_codes) then
-        if note_group ~= "" then
-          table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid)})
-          note_group = ""
-        end
-        table.insert(tokens, {type = "symbol", value = char, width_sp = gregosheet.measure_width_sp(char, music_fontid)})
-        last_type = "symbol"
-      elseif code_in_array(code, gregosheet.barlines_codes) then
-        if note_group ~= "" then
-          table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid)})
-          note_group = ""
-        end
-        table.insert(tokens, {type = "barline", value = char, width_sp = gregosheet.measure_width_sp(char, music_fontid)})
-        last_type = "barline"
+    if code_in_array(code, gregosheet.notes_codes) then
+      note_group = note_group .. char
+      last_type = "note"
+    elseif code_in_array(code, gregosheet.delimiters_codes) then
+      if note_group ~= "" then
+        table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid)})
+        note_group = ""
       end
+      if last_type ~= "delimiter" then
+        table.insert(tokens, {type = "delimiter", value = gregosheet.std_delimiter_sequence, width_sp = std_delimiter_sequence_width_sp})
+      end
+      last_type = "delimiter"
+    elseif code_in_array(code, gregosheet.symbols_codes) then
+      if note_group ~= "" then
+        table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid)})
+        note_group = ""
+      end
+      table.insert(tokens, {type = "symbol", value = char, width_sp = gregosheet.measure_width_sp(char, music_fontid)})
+      last_type = "symbol"
+    elseif code_in_array(code, gregosheet.barlines_codes) then
+      if note_group ~= "" then
+        table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid)})
+        note_group = ""
+      end
+      table.insert(tokens, {type = "barline", value = char, width_sp = gregosheet.measure_width_sp(char, music_fontid)})
+      last_type = "barline"
     end
   end
 

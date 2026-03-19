@@ -18,7 +18,7 @@ function gregosheet.render(systems)
     tex.sprint(system.clef.value)
 
     for i, token in ipairs(system.melody) do
-      tex.sprint(token.value)
+      tex.sprint(-2, token.value)
     end
     tex.sprint("}")
 
