@@ -338,7 +338,11 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
         recompute_delimiter_width(system.melody[#system.melody], gap_to_page_end_sp, "max")
 
         table.insert(systems, system)
-        system = {clef = clef, melody = {}, lyrics = {}}
+        local next_clef = clef
+        if gregosheet.clef_mode == "first" then
+          next_clef = {type = "symbol", value = "-", width_sp = gregosheet.measure_width_sp("-", gregosheet.music_fontid)}
+        end
+        system = {clef = next_clef, melody = {}, lyrics = {}}
       end
     else
       system_break = false
