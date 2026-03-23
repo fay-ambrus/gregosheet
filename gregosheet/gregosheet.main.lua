@@ -1,6 +1,7 @@
 gregosheet = gregosheet or {}
 
-function gregosheet.main(melody_str, lyrics_str, tone_str)
+function gregosheet.main(melody_str, lyrics_str, tone_str, clef_mode)
+  gregosheet.clef_mode = clef_mode or "all"
   local melody = gregosheet.parse_melody(melody_str)
   local lyrics = gregosheet.parse_lyrics(lyrics_str)
   local systems = gregosheet.spacing_compute(melody, lyrics, tone_str)

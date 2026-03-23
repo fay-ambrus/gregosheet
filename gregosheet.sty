@@ -15,7 +15,7 @@
 }
 
 % Load fonts (user-defined)
-\newfontfamily\MusicFont{guidohu_.ttf}
+\newfontfamily\MusicFont{GuidoHU.ttf}
 
 % Capture font IDs in Lua
 {\MusicFont\fontsize{20}{24}\selectfont
@@ -39,6 +39,7 @@
 
 \NewDocumentEnvironment{gregosheet}{O{}}{
   % begin
+  \tl_gset:Nn \g_gregosheet_clef_tl {all}
   \keys_set:nn { gregosheet } { #1 }
   \vskip\blockvskip
   \catcode`\_=12
@@ -54,14 +55,19 @@
     gregosheet.main(
       "\luaescapestring{\tl_use:N \g_gregosheet_melody_tl}",
       "\luaescapestring{\tl_use:N \g_gregosheet_lyrics_tl}",
-      "\luaescapestring{\tl_use:N \g_gregosheet_tone_tl}"
+      "\luaescapestring{\tl_use:N \g_gregosheet_tone_tl}",
+      "\luaescapestring{\tl_use:N \g_gregosheet_clef_tl}"
     )
   }
   \tl_gclear:N \g_gregosheet_tone_tl
   \vskip\blockvskip
 }
 
+\tl_new:N \g_gregosheet_clef_tl
+\tl_gset:Nn \g_gregosheet_clef_tl {all}
+
 \keys_define:nn { gregosheet } {
-  tone .tl_set:N = \g_gregosheet_tone_tl
+  tone .tl_set:N = \g_gregosheet_tone_tl,
+  clef .tl_set:N = \g_gregosheet_clef_tl,
 }
 \ExplSyntaxOff
