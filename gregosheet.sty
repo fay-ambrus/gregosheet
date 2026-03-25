@@ -1,6 +1,10 @@
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesPackage{gregosheet}[2025/01/01 Custom sheet music]
 
+\newif\ifgregosheet@debug
+\DeclareOption{debug}{\gregosheet@debugtrue}
+\ProcessOptions\relax
+
 \RequirePackage{fontspec}
 \RequirePackage{luacode}
 \RequirePackage{xparse}
@@ -14,8 +18,14 @@
   require("gregosheet/gregosheet.main")
 }
 
-% Load fonts (user-defined)
+% Capture font IDs in Lua
 \newfontfamily\MusicFont{GuidoHU.ttf}
+
+% Debug: enable with \usepackage[debug]{gregosheet} or \gregosheetdebug mid-document
+\newcommand{\gregosheetdebug}{\directlua{gregosheet.debug = true}}
+\ifgregosheet@debug
+  \gregosheetdebug
+\fi
 
 % Capture font IDs in Lua
 {\MusicFont\fontsize{20}{24}\selectfont

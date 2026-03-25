@@ -25,7 +25,7 @@ function gregosheet.parse_melody(str)
 
   for _, code in utf8.codes(str) do
     local char = utf8.char(code)
-    print("DEBUG: Processing char: " .. char .. " (code: " .. code .. ")")
+    gregosheet.debug_print("DEBUG: Processing char: " .. char .. " (code: " .. code .. ")")
     if code_in_array(code, gregosheet.notes_codes) then
       note_group = note_group .. char
       last_type = "note"
