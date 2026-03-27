@@ -1,5 +1,14 @@
 gregosheet = gregosheet or {}
 
+-- Debug flag (toggle with \gregosheetdebug in LaTeX)
+gregosheet.debug = false
+
+function gregosheet.debug_print(msg)
+  if gregosheet.debug then
+    texio.write_nl(msg)
+  end
+end
+
 -- Constants
 gregosheet.delimiter_s = "¨"
 gregosheet.delimiter_m = "-"
