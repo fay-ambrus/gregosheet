@@ -17,7 +17,7 @@ gregosheet.std_delimiter_sequence = "---"
 gregosheet.tolerable_syllabel_gap_sp = 73000
 
 -- Code tables
-gregosheet.notes = "[ðñ0123456789öüó^qwertzuiopõúÝÞQWERTZUIOPÕÚÔasdfghjkléáûØÙASDFGHJKLÉÁÛ`íyxcvbnmzZŸ¡¢£¥¦©ª«¬àâãäåæćçèêëìîï\\][¨~‚ƒ…†‡ˆ‰Š‹Œ’’Ç°±²³´µ¾¸¹]"
+gregosheet.notes = "[ðñ0123456789öüó^qwertzuiopõúÝÞQWERTZUIOPÕÚÔasdfghjkléáûØÙASDFGHJKLÉÁÛ`íyxcvbnmzZŸ¡¢£¥¦©ª«¬àâãäåæćçèêëìîï\\][¨~‚ƒ…†‡ˆ‰Š‹Œ’’Ç°±²³´µ¾¸¹×Ô]"
 gregosheet.recited_notes = "[[Ÿ¡¢£¥¦©ª«¬]"
 gregosheet.delimiters = "[-_*]"
 gregosheet.symbols = "[sM>#&@{}<¿À÷øÍYXCVBNÈÊËÌÎÏÐÑÒßòôþùý“”•–—˜™š›œº»]"
