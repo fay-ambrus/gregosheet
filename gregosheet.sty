@@ -88,6 +88,8 @@
 \keys_define:nn { gregosheet/piece } {
   title .tl_set:N = \l_gregosheet_title_tl,
   title .initial:n = {},
+  tone .tl_set:N = \l_gregosheet_piece_tone_tl,
+  tone .initial:n = {},
 }
 
 \NewDocumentCommand{\addsheet}{O{} m}{
@@ -108,7 +110,7 @@
 % ============================================================
 \NewDocumentCommand{\addinline}{O{} m m}{
   \keys_set:nn { gregosheet/piece } { #1 }
-  \__gregosheet_add_piece:nnn { #2 } { #3 } { }
+  \__gregosheet_add_piece:nnn { #2 } { #3 } { \tl_use:N \l_gregosheet_piece_tone_tl }
 }
 
 % ============================================================
