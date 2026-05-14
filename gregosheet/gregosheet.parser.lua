@@ -7,7 +7,9 @@ function gregosheet.parse_melody(str)
 
   local tokens = {}
   local note_group = ""
+  local note_group_start = nil
   local last_type = nil
+  local char_pos = 0
 
   -- Initialize the code arrays from the pattern strings
   if gregosheet.notes then
@@ -24,39 +26,43 @@ function gregosheet.parse_melody(str)
   end
 
   for _, code in utf8.codes(str) do
+    char_pos = char_pos + 1
     local char = utf8.char(code)
-    gregosheet.debug_print("DEBUG: Processing char: " .. char .. " (code: " .. code .. ")")
+    gregosheet.debug_print("DEBUG: Processing char: " .. char .. " (code: " .. code .. ", pos: " .. char_pos .. ")")
     if code_in_array(code, gregosheet.notes_codes) then
+      if note_group == "" then
+        note_group_start = char_pos
+      end
       note_group = note_group .. char
       last_type = "note"
     elseif code_in_array(code, gregosheet.delimiters_codes) then
       if note_group ~= "" then
-        table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid)})
+        table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid), char_pos = note_group_start})
         note_group = ""
       end
       if last_type ~= "delimiter" then
-        table.insert(tokens, {type = "delimiter", value = gregosheet.std_delimiter_sequence, width_sp = std_delimiter_sequence_width_sp})
+        table.insert(tokens, {type = "delimiter", value = gregosheet.std_delimiter_sequence, width_sp = std_delimiter_sequence_width_sp, char_pos = char_pos})
       end
       last_type = "delimiter"
     elseif code_in_array(code, gregosheet.symbols_codes) then
       if note_group ~= "" then
-        table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid)})
+        table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid), char_pos = note_group_start})
         note_group = ""
       end
-      table.insert(tokens, {type = "symbol", value = char, width_sp = gregosheet.measure_width_sp(char, music_fontid)})
+      table.insert(tokens, {type = "symbol", value = char, width_sp = gregosheet.measure_width_sp(char, music_fontid), char_pos = char_pos})
       last_type = "symbol"
     elseif code_in_array(code, gregosheet.barlines_codes) then
       if note_group ~= "" then
-        table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid)})
+        table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid), char_pos = note_group_start})
         note_group = ""
       end
-      table.insert(tokens, {type = "barline", value = char, width_sp = gregosheet.measure_width_sp(char, music_fontid)})
+      table.insert(tokens, {type = "barline", value = char, width_sp = gregosheet.measure_width_sp(char, music_fontid), char_pos = char_pos})
       last_type = "barline"
     end
   end
 
   if note_group ~= "" then
-    table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid)})
+    table.insert(tokens, {type = "note", value = note_group, width_sp = gregosheet.measure_width_sp(note_group, music_fontid), char_pos = note_group_start})
   end
 
   return tokens
@@ -90,7 +96,12 @@ function gregosheet.parse_lyrics(str)
 
       if syllable and syllable ~= "" then
         local comment = false
-        if syllable:sub(1, 1) == "<" and syllable:sub(-1) == ">" then
+        local floating = false
+        if syllable:sub(1, 2) == "<<" and syllable:sub(-2) == ">>" then
+          floating = true
+          comment = true
+          syllable = syllable:sub(3, -3)
+        elseif syllable:sub(1, 1) == "<" and syllable:sub(-1) == ">" then
           comment = true
           syllable = syllable:sub(2, -2)
         end
@@ -102,6 +113,7 @@ function gregosheet.parse_lyrics(str)
           text = syllable,
           word_end = word_end,
           comment = comment,
+          floating = floating,
           width_sp = gregosheet.measure_width_sp(syllable, gregosheet.lyrics_fontid)
         })
       end

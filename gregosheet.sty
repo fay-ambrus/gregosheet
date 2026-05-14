@@ -21,50 +21,56 @@
 % Capture font IDs in Lua
 \newfontfamily\MusicFont{GuidoHU.ttf}
 
-% Debug: enable with \usepackage[debug]{gregosheet} or \gregosheetdebug mid-document
+% Debug
 \newcommand{\gregosheetdebug}{\directlua{gregosheet.debug = true}}
 \ifgregosheet@debug
   \gregosheetdebug
 \fi
 
-% Capture font IDs in Lua
 {\MusicFont\fontsize{20}{24}\selectfont
   \directlua{gregosheet.music_fontid = font.current()}
 }
-% Lyric font ID will be captured after \lyricfont is defined by user
 
-% Internal storage and commands
+% ============================================================
+% Sheet definitions
+% ============================================================
 \ExplSyntaxOn
-\tl_new:N \g_gregosheet_melody_tl
-\tl_new:N \g_gregosheet_lyrics_tl
-\tl_new:N \g_gregosheet_tone_tl
 
-\NewDocumentCommand{\melody}{m}{
-  \tl_gset:Nn \g_gregosheet_melody_tl {#1}
+\NewDocumentCommand{\defsheet}{m m m}{
+  \cs_gset:cpn {sheetmelody@#1} {#2}
+  \cs_gset:cpn {sheetlyrics@#1} {#3}
 }
 
-\NewDocumentCommand{\lyrics}{m}{
-  \tl_gset:Nn \g_gregosheet_lyrics_tl {#1}
+% ============================================================
+% Gregosheet environment
+% ============================================================
+\tl_new:N \g_gregosheet_pieces_tl
+\tl_new:N \g_gregosheet_tone_tl
+\tl_new:N \g_gregosheet_clef_tl
+
+\keys_define:nn { gregosheet } {
+  tone .tl_gset:N = \g_gregosheet_tone_tl,
+  clef .tl_gset:N = \g_gregosheet_clef_tl,
 }
 
 \NewDocumentEnvironment{gregosheet}{O{}}{
   % begin
+  \tl_gclear:N \g_gregosheet_pieces_tl
   \tl_gset:Nn \g_gregosheet_clef_tl {all}
+  \tl_gclear:N \g_gregosheet_tone_tl
   \keys_set:nn { gregosheet } { #1 }
   \vskip\blockvskip
   \catcode`\_=12
   \catcode`\^=12
   \catcode`\$=12
-  % Capture lyric font ID after user styles are loaded
   {\lyricfont\fontsize{10}{12}\selectfont
     \directlua{gregosheet.lyrics_fontid = font.current()}
   }
 }{
-  % end: call Lua main function
+  % end: call Lua
   \directlua{
     gregosheet.main(
-      "\luaescapestring{\tl_use:N \g_gregosheet_melody_tl}",
-      "\luaescapestring{\tl_use:N \g_gregosheet_lyrics_tl}",
+      { \tl_use:N \g_gregosheet_pieces_tl },
       "\luaescapestring{\tl_use:N \g_gregosheet_tone_tl}",
       "\luaescapestring{\tl_use:N \g_gregosheet_clef_tl}"
     )
@@ -73,11 +79,63 @@
   \vskip\blockvskip
 }
 
-\tl_new:N \g_gregosheet_clef_tl
-\tl_gset:Nn \g_gregosheet_clef_tl {all}
-
-\keys_define:nn { gregosheet } {
-  tone .tl_set:N = \g_gregosheet_tone_tl,
-  clef .tl_set:N = \g_gregosheet_clef_tl,
+% ============================================================
+% \addsheet[head={...}, sub={...}]{Name}
+% ============================================================
+\keys_define:nn { gregosheet/piece } {
+  title .tl_set:N = \l_gregosheet_title_tl,
+  title .initial:n = {},
 }
+
+\NewDocumentCommand{\addsheet}{O{} m}{
+  \keys_set:nn { gregosheet/piece } { #1 }
+  \cs_if_exist:cTF {sheetmelody@#2}
+  {
+    \__gregosheet_add_piece:ee
+      { \use:c {sheetmelody@#2} }
+      { \use:c {sheetlyrics@#2} }
+  }
+  { \textbf{[Missing~sheet:~#2]} }
+}
+
+% ============================================================
+% \addinline[head={...}, sub={...}]{melody}{lyrics}
+% ============================================================
+\NewDocumentCommand{\addinline}{O{} m m}{
+  \keys_set:nn { gregosheet/piece } { #1 }
+  \__gregosheet_add_piece:nn { #2 } { #3 }
+}
+
+% ============================================================
+% Internal: append a piece to the Lua table
+% ============================================================
+\cs_new:Nn \__gregosheet_add_piece:nn {
+  \tl_gput_right:Nx \g_gregosheet_pieces_tl {
+    { melody = "\luaescapestring{ #1 }",
+      lyrics = "\luaescapestring{ #2 }",
+      title = "\luaescapestring{ \tl_use:N \l_gregosheet_title_tl }" },
+  }
+}
+\cs_generate_variant:Nn \__gregosheet_add_piece:nn { ee }
+
+% ============================================================
+% \addtext{text} - adds red inline text to lyrics stream
+% ============================================================
+\NewDocumentCommand{\addtext}{m}{
+  \tl_gput_right:Nx \g_gregosheet_pieces_tl {
+    { melody = "",
+      lyrics = "<<#1>>",
+      title = "" },
+  }
+}
+
+% ============================================================
+% \printsheet shorthand
+% ============================================================
+\NewDocumentCommand{\printsheet}{m}{
+  \begin{gregosheet}
+    \addsheet{#1}
+  \end{gregosheet}
+}
+
 \ExplSyntaxOff

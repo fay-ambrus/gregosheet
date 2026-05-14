@@ -10,6 +10,23 @@ end
 
 function gregosheet.render(systems)
   for sys_idx, system in ipairs(systems) do
+    -- Render titles above music (only if this system has any)
+    if system.titles and #system.titles > 0 then
+      tex.sprint("\\hbox to 0pt{")
+      tex.sprint("\\fontsize{\\lyricfontsize}{12}\\selectfont\\lyricfont")
+      for _, title in ipairs(system.titles) do
+        if title.title ~= "" then
+          tex.sprint("\\hbox to 0pt{")
+          tex.sprint("\\hskip" .. title.start_sp .. "sp")
+          tex.sprint("\\textcolor{red}{")
+          tex.sprint(-2, title.title)
+          tex.sprint("}\\hss}")
+        end
+      end
+      tex.sprint("\\hss}")
+      tex.sprint("\\nopagebreak\\vskip\\lyricvskip")
+    end
+
     tex.sprint("\\noindent")
 
     -- Create music hbox
@@ -43,14 +60,14 @@ function gregosheet.render(systems)
     end
 
     -- Add tone on current line if it fits
-    if system.tone and not system.new_line then
+    if system.tone and not system.tone.new_line then
       render_tone(system.tone.tone_str, system.tone.start_sp)
     end
 
     tex.sprint("\\hss}")
 
-  -- Add tone on new line if it doesn't fit
-    if system.tone and system.new_line then
+    -- Add tone on new line if it doesn't fit
+    if system.tone and system.tone.new_line then
       render_tone(system.tone.tone_str, system.tone.start_sp)
     end
 
