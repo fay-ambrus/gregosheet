@@ -1,12 +1,19 @@
 gregosheet = gregosheet or {}
 
-function gregosheet.main(pieces, tone_str, clef_mode)
+function gregosheet.main(pieces, clef_mode)
   gregosheet.clef_mode = clef_mode or "all"
+
+  -- Use tone from the last piece only
+  local tone_str = ""
+  local last_piece = pieces[#pieces]
+  if last_piece and last_piece.tone and last_piece.tone ~= "" then
+    tone_str = last_piece.tone
+  end
 
   -- Concatenate melodies and lyrics, compute character offsets
   local melody_str = ""
   local lyrics_str = ""
-  local piece_offsets = {} -- {melody_start_char, head, sub}
+  local piece_offsets = {}
 
   for i, piece in ipairs(pieces) do
     local mel = piece.melody

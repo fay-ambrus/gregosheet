@@ -36,20 +36,26 @@
 % ============================================================
 \ExplSyntaxOn
 
-\NewDocumentCommand{\defsheet}{m m m}{
-  \cs_gset:cpn {sheetmelody@#1} {#2}
-  \cs_gset:cpn {sheetlyrics@#1} {#3}
+\keys_define:nn { gregosheet/def } {
+  tone .tl_set:N = \l_gregosheet_def_tone_tl,
+  tone .initial:n = {},
+}
+
+\NewDocumentCommand{\defsheet}{O{} m m m}{
+  \tl_clear:N \l_gregosheet_def_tone_tl
+  \keys_set:nn { gregosheet/def } { #1 }
+  \cs_gset:cpn {sheetmelody@#2} {#3}
+  \cs_gset:cpn {sheetlyrics@#2} {#4}
+  \cs_gset:cpx {sheettone@#2} { \tl_use:N \l_gregosheet_def_tone_tl }
 }
 
 % ============================================================
 % Gregosheet environment
 % ============================================================
 \tl_new:N \g_gregosheet_pieces_tl
-\tl_new:N \g_gregosheet_tone_tl
 \tl_new:N \g_gregosheet_clef_tl
 
 \keys_define:nn { gregosheet } {
-  tone .tl_gset:N = \g_gregosheet_tone_tl,
   clef .tl_gset:N = \g_gregosheet_clef_tl,
 }
 
@@ -57,7 +63,6 @@
   % begin
   \tl_gclear:N \g_gregosheet_pieces_tl
   \tl_gset:Nn \g_gregosheet_clef_tl {all}
-  \tl_gclear:N \g_gregosheet_tone_tl
   \keys_set:nn { gregosheet } { #1 }
   \vskip\blockvskip
   \catcode`\_=12
@@ -71,11 +76,9 @@
   \directlua{
     gregosheet.main(
       { \tl_use:N \g_gregosheet_pieces_tl },
-      "\luaescapestring{\tl_use:N \g_gregosheet_tone_tl}",
       "\luaescapestring{\tl_use:N \g_gregosheet_clef_tl}"
     )
   }
-  \tl_gclear:N \g_gregosheet_tone_tl
   \vskip\blockvskip
 }
 
@@ -91,9 +94,11 @@
   \keys_set:nn { gregosheet/piece } { #1 }
   \cs_if_exist:cTF {sheetmelody@#2}
   {
-    \__gregosheet_add_piece:ee
+    \tl_set:Nx \l_tmpa_tl { \cs_if_exist_use:c {sheettone@#2} }
+    \__gregosheet_add_piece:eee
       { \use:c {sheetmelody@#2} }
       { \use:c {sheetlyrics@#2} }
+      { \tl_use:N \l_tmpa_tl }
   }
   { \textbf{[Missing~sheet:~#2]} }
 }
@@ -103,20 +108,21 @@
 % ============================================================
 \NewDocumentCommand{\addinline}{O{} m m}{
   \keys_set:nn { gregosheet/piece } { #1 }
-  \__gregosheet_add_piece:nn { #2 } { #3 }
+  \__gregosheet_add_piece:nnn { #2 } { #3 } { }
 }
 
 % ============================================================
 % Internal: append a piece to the Lua table
 % ============================================================
-\cs_new:Nn \__gregosheet_add_piece:nn {
+\cs_new:Nn \__gregosheet_add_piece:nnn {
   \tl_gput_right:Nx \g_gregosheet_pieces_tl {
     { melody = "\luaescapestring{ #1 }",
       lyrics = "\luaescapestring{ #2 }",
+      tone = "\luaescapestring{ #3 }",
       title = "\luaescapestring{ \tl_use:N \l_gregosheet_title_tl }" },
   }
 }
-\cs_generate_variant:Nn \__gregosheet_add_piece:nn { ee }
+\cs_generate_variant:Nn \__gregosheet_add_piece:nnn { eee }
 
 % ============================================================
 % \addtext{text} - adds red inline text to lyrics stream

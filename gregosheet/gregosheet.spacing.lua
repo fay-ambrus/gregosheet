@@ -220,7 +220,6 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
         -- Update clef for line breaks (only new key)
         local old_key = clef.key or ""
         local naturals = gregosheet.compute_naturals(old_key, new_key)
-        texio.write_nl("KEY CHANGE: old='" .. old_key .. "' new='" .. new_key .. "' naturals='" .. naturals .. "'")
 
         -- Prepend naturals to the current token
         if naturals ~= "" then
@@ -267,7 +266,6 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
     -- Record title position in current system
     if token.piece_start and token.piece_start.title ~= "" then
       local horizontal_position_sp = calculate_horizontal_position(system)
-      texio.write_nl("TITLE: pos=" .. horizontal_position_sp .. " title='" .. token.piece_start.title .. "'")
       table.insert(system.titles, {
         title = token.piece_start.title,
         start_sp = horizontal_position_sp,
