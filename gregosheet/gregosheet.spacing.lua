@@ -206,6 +206,16 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
       if not first_piece_seen then
         first_piece_seen = true
       else
+        -- Ensure there's a delimiter before the piece boundary
+        local prev = system.melody[#system.melody]
+        if prev and prev.type ~= "delimiter" then
+          table.insert(system.melody, {
+            type = "delimiter",
+            value = "-",
+            width_sp = gregosheet.measure_width_sp("-", gregosheet.music_fontid),
+          })
+        end
+
         -- Collect new key signature from consecutive symbols
         local new_key = ""
         if token.type == "symbol" then
@@ -219,22 +229,30 @@ function gregosheet.spacing_compute(melody, lyrics, tone)
 
         -- Update clef for line breaks (only new key)
         local old_key = clef.key or ""
-        local naturals = gregosheet.compute_naturals(old_key, new_key)
 
-        -- Prepend naturals to the current token
-        if naturals ~= "" then
-          token.value = naturals .. token.value
-          token.width_sp = gregosheet.measure_width_sp(token.value, gregosheet.music_fontid)
+        if new_key == old_key then
+          -- Same key: hide the inline key sig symbol
+          if token.type == "symbol" then
+            token.value = ""
+            token.width_sp = 0
+          end
+        else
+          -- Different key: show naturals + new key inline
+          local naturals = gregosheet.compute_naturals(old_key, new_key)
+          if naturals ~= "" then
+            token.value = naturals .. token.value
+            token.width_sp = gregosheet.measure_width_sp(token.value, gregosheet.music_fontid)
+          end
+
+          local clef_value = clef.glyph .. new_key .. "-"
+          clef = {
+            type = "symbol",
+            value = clef_value,
+            width_sp = gregosheet.measure_width_sp(clef_value, gregosheet.music_fontid),
+            glyph = clef.glyph,
+            key = new_key,
+          }
         end
-
-        local clef_value = clef.glyph .. new_key .. "-"
-        clef = {
-          type = "symbol",
-          value = clef_value,
-          width_sp = gregosheet.measure_width_sp(clef_value, gregosheet.music_fontid),
-          glyph = clef.glyph,
-          key = new_key,
-        }
       end
     end
 

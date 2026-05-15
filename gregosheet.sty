@@ -93,6 +93,8 @@
 }
 
 \NewDocumentCommand{\addsheet}{O{} m}{
+  \tl_clear:N \l_gregosheet_title_tl
+  \tl_clear:N \l_gregosheet_piece_tone_tl
   \keys_set:nn { gregosheet/piece } { #1 }
   \cs_if_exist:cTF {sheetmelody@#2}
   {
@@ -109,6 +111,8 @@
 % \addinline[head={...}, sub={...}]{melody}{lyrics}
 % ============================================================
 \NewDocumentCommand{\addinline}{O{} m m}{
+  \tl_clear:N \l_gregosheet_title_tl
+  \tl_clear:N \l_gregosheet_piece_tone_tl
   \keys_set:nn { gregosheet/piece } { #1 }
   \__gregosheet_add_piece:nnn { #2 } { #3 } { \tl_use:N \l_gregosheet_piece_tone_tl }
 }

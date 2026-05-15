@@ -18,9 +18,9 @@ function gregosheet.render(systems)
         if title.title ~= "" then
           tex.sprint("\\hbox to 0pt{")
           tex.sprint("\\hskip" .. title.start_sp .. "sp")
-          tex.sprint("\\textcolor{red}{")
+          tex.sprint("\\textcolor{red}{\\MakeUppercase{")
           tex.sprint(-2, title.title)
-          tex.sprint("}\\hss}")
+          tex.sprint("}}\\hss}")
         end
       end
       tex.sprint("\\hss}")
