@@ -7,18 +7,22 @@
 
 \RequirePackage{fontspec}
 \RequirePackage{luacode}
-\RequirePackage{xparse}
 
-% Load Lua module
+% Load Lua modules
 \directlua{
   require("gregosheet/gregosheet.common")
-  require("gregosheet/gregosheet.parser")
-  require("gregosheet/gregosheet.spacing")
+  require("gregosheet/gregosheet.keysig")
+  require("gregosheet/gregosheet.syllabify")
+  require("gregosheet/gregosheet.parse")
+  require("gregosheet/gregosheet.merge")
+  require("gregosheet/gregosheet.measure")
+  require("gregosheet/gregosheet.justify")
+  require("gregosheet/gregosheet.break")
   require("gregosheet/gregosheet.render")
   require("gregosheet/gregosheet.main")
 }
 
-% Capture font IDs in Lua
+% Capture font IDs in Lua (once at load time)
 \newfontfamily\MusicFont{GuidoHU.ttf}
 
 % Debug
@@ -27,14 +31,26 @@
   \gregosheetdebug
 \fi
 
-{\MusicFont\fontsize{20}{24}\selectfont
+{\MusicFont\fontsize{\musicfontsize}{24}\selectfont
   \directlua{gregosheet.music_fontid = font.current()}
+}
+{\lyricfont\fontsize{\lyricfontsize}{12}\selectfont
+  \directlua{gregosheet.lyrics_fontid = font.current()}
+}
+
+% ============================================================
+% Tone definitions
+% ============================================================
+\ExplSyntaxOn
+
+\NewDocumentCommand{\deftone}{m m m}{
+  \cs_gset:cpn {tonemelody@#1} {#2}
+  \cs_gset:cpn {tonelabel@#1} {#3}
 }
 
 % ============================================================
 % Sheet definitions
 % ============================================================
-\ExplSyntaxOn
 
 \keys_define:nn { gregosheet/def } {
   tone .tl_set:N = \l_gregosheet_def_tone_tl,
@@ -53,37 +69,29 @@
 % Gregosheet environment
 % ============================================================
 \tl_new:N \g_gregosheet_pieces_tl
-\tl_new:N \g_gregosheet_clef_tl
-
-\keys_define:nn { gregosheet } {
-  clef .tl_gset:N = \g_gregosheet_clef_tl,
-}
 
 \NewDocumentEnvironment{gregosheet}{O{}}{
   % begin
   \tl_gclear:N \g_gregosheet_pieces_tl
-  \tl_gset:Nn \g_gregosheet_clef_tl {all}
-  \keys_set:nn { gregosheet } { #1 }
   \vskip\blockvskip
+  % Catcode changes restored automatically at environment end (TeX grouping)
+  % _ is used in lyrics as space-within-syllable; ^ is a GuidoHU note char;
+  % $ is defensive. All three must be "other" (catcode 12) inside melody/lyrics.
   \catcode`\_=12
   \catcode`\^=12
   \catcode`\$=12
-  {\lyricfont\fontsize{10}{12}\selectfont
-    \directlua{gregosheet.lyrics_fontid = font.current()}
-  }
 }{
   % end: call Lua
   \directlua{
     gregosheet.main(
-      { \tl_use:N \g_gregosheet_pieces_tl },
-      "\luaescapestring{\tl_use:N \g_gregosheet_clef_tl}"
+      { \tl_use:N \g_gregosheet_pieces_tl }
     )
   }
   \vskip\blockvskip
 }
 
 % ============================================================
-% \addsheet[head={...}, sub={...}]{Name}
+% \addsheet[title={...}, tone={...}]{Name}
 % ============================================================
 \keys_define:nn { gregosheet/piece } {
   title .tl_set:N = \l_gregosheet_title_tl,
@@ -98,7 +106,10 @@
   \keys_set:nn { gregosheet/piece } { #1 }
   \cs_if_exist:cTF {sheetmelody@#2}
   {
-    \tl_set:Nx \l_tmpa_tl { \cs_if_exist_use:c {sheettone@#2} }
+    % Use piece-level tone override if provided, otherwise fall back to defsheet tone
+    \tl_if_empty:NTF \l_gregosheet_piece_tone_tl
+      { \tl_set:Nx \l_tmpa_tl { \cs_if_exist_use:c {sheettone@#2} } }
+      { \tl_set:Nx \l_tmpa_tl { \l_gregosheet_piece_tone_tl } }
     \__gregosheet_add_piece:eee
       { \use:c {sheetmelody@#2} }
       { \use:c {sheetlyrics@#2} }
@@ -108,7 +119,7 @@
 }
 
 % ============================================================
-% \addinline[head={...}, sub={...}]{melody}{lyrics}
+% \addinline[title={...}, tone={...}]{melody}{lyrics}
 % ============================================================
 \NewDocumentCommand{\addinline}{O{} m m}{
   \tl_clear:N \l_gregosheet_title_tl
@@ -121,23 +132,47 @@
 % Internal: append a piece to the Lua table
 % ============================================================
 \cs_new:Nn \__gregosheet_add_piece:nnn {
-  \tl_gput_right:Nx \g_gregosheet_pieces_tl {
-    { melody = "\luaescapestring{ #1 }",
-      lyrics = "\luaescapestring{ #2 }",
-      tone = "\luaescapestring{ #3 }",
-      title = "\luaescapestring{ \tl_use:N \l_gregosheet_title_tl }" },
+  % Resolve tone reference: if tone name maps to a \deftone, use its melody+label
+  \tl_set:Nn \l_tmpa_tl {#3}
+  \tl_if_empty:NTF \l_tmpa_tl
+  {
+    \tl_gput_right:Nx \g_gregosheet_pieces_tl {
+      { melody = "\luaescapestring{ #1 }",
+        lyrics = "\luaescapestring{ #2 }",
+        title = "\luaescapestring{ \tl_use:N \l_gregosheet_title_tl }" },
+    }
+  }
+  {
+    \cs_if_exist:cTF {tonemelody@#3}
+    {
+      \tl_gput_right:Nx \g_gregosheet_pieces_tl {
+        { melody = "\luaescapestring{ #1 }",
+          lyrics = "\luaescapestring{ #2 }",
+          tone_melody = "\luaescapestring{ \use:c {tonemelody@#3} }",
+          tone_label = "\luaescapestring{ \use:c {tonelabel@#3} }",
+          title = "\luaescapestring{ \tl_use:N \l_gregosheet_title_tl }" },
+      }
+    }
+    {
+      % Tone name not found — emit warning, skip tone
+      \msg_warning:nnn { gregosheet } { unknown-tone } {#3}
+      \tl_gput_right:Nx \g_gregosheet_pieces_tl {
+        { melody = "\luaescapestring{ #1 }",
+          lyrics = "\luaescapestring{ #2 }",
+          title = "\luaescapestring{ \tl_use:N \l_gregosheet_title_tl }" },
+      }
+    }
   }
 }
 \cs_generate_variant:Nn \__gregosheet_add_piece:nnn { eee }
+\msg_new:nnn { gregosheet } { unknown-tone } { Unknown~tone~'#1'. }
 
 % ============================================================
-% \addtext{text} - adds red inline text to lyrics stream
+% \addtext{text} - floating red text, attached to preceding piece
 % ============================================================
 \NewDocumentCommand{\addtext}{m}{
   \tl_gput_right:Nx \g_gregosheet_pieces_tl {
-    { melody = "",
-      lyrics = "<<#1>>",
-      title = "" },
+    { type = "floating_text", text = "\luaescapestring{#1}" },
   }
 }
 

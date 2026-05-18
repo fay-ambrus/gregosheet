@@ -1,27 +1,17 @@
 gregosheet = gregosheet or {}
 
-local function render_tone(tone_str, tone_start_sp)
-  tex.sprint("\\hbox to 0pt{")
-  tex.sprint("\\hskip" .. tone_start_sp .. "sp")
-  tex.sprint("\\textcolor{red}{")
-  tex.sprint(-2, tone_str)
-  tex.sprint("}\\hss}")
-end
-
 function gregosheet.render(systems)
   for sys_idx, system in ipairs(systems) do
-    -- Render titles above music (only if this system has any)
+    -- Render titles above music
     if system.titles and #system.titles > 0 then
       tex.sprint("\\hbox to 0pt{")
       tex.sprint("\\fontsize{\\lyricfontsize}{12}\\selectfont\\lyricfont")
       for _, title in ipairs(system.titles) do
-        if title.title ~= "" then
-          tex.sprint("\\hbox to 0pt{")
-          tex.sprint("\\hskip" .. title.start_sp .. "sp")
-          tex.sprint("\\textcolor{red}{\\MakeUppercase{")
-          tex.sprint(-2, title.title)
-          tex.sprint("}}\\hss}")
-        end
+        tex.sprint("\\hbox to 0pt{")
+        tex.sprint("\\hskip" .. title.start_sp .. "sp")
+        tex.sprint("\\textcolor{red}{\\MakeUppercase{")
+        tex.sprint(-2, title.title)
+        tex.sprint("}}\\hss}")
       end
       tex.sprint("\\hss}")
       tex.sprint("\\nopagebreak\\vskip\\lyricvskip")
@@ -29,47 +19,58 @@ function gregosheet.render(systems)
 
     tex.sprint("\\noindent")
 
-    -- Create music hbox
+    -- Render music line
     tex.sprint("\\hbox{")
     tex.sprint("\\fontsize{\\musicfontsize}{24}\\selectfont\\MusicFont")
-    tex.sprint(system.clef.value)
+    tex.sprint(-2, system.clef.value)
 
-    for i, token in ipairs(system.melody) do
-      tex.sprint(-2, token.value)
+    for _, event in ipairs(system.events) do
+      if event.type == "tone_group" then
+        -- Render tone notes with tight "-" delimiters
+        for j, sub in ipairs(event.events) do
+          tex.sprint(-2, sub.glyph)
+          if j < #event.events then
+            tex.sprint(-2, gregosheet.delimiter_m)
+          end
+        end
+      elseif event.glyph then
+        tex.sprint(-2, event.glyph)
+      end
     end
     tex.sprint("}")
 
-    -- Create lyrics line with absolute positioning
+    -- Render lyrics line
     tex.sprint("\\nopagebreak\\vskip\\lyricvskip")
     tex.sprint("\\hbox to 0pt{")
     tex.sprint("\\fontsize{\\lyricfontsize}{12}\\selectfont\\lyricfont")
 
-    for i, lyric in ipairs(system.lyrics) do
-      if lyric.start_sp then
+    for _, syl in ipairs(system.syllables) do
+      if syl.start_sp and syl.text ~= "" then
         tex.sprint("\\hbox to 0pt{")
-        tex.sprint("\\hskip" .. lyric.start_sp .. "sp")
-        if lyric.text == "*" or lyric.text == "ANT." or lyric.text == "REF." or lyric.comment then
+        tex.sprint("\\hskip" .. math.floor(syl.start_sp) .. "sp")
+        if syl.comment or syl.text == "*" then
           tex.sprint("\\textcolor{red}{")
-          tex.sprint(-2, lyric.text)
+          tex.sprint(-2, syl.text)
           tex.sprint("}")
         else
-          tex.sprint(-2, lyric.text)
+          tex.sprint(-2, syl.text)
         end
         tex.sprint("\\hss}")
       end
     end
 
-    -- Add tone on current line if it fits
-    if system.tone and not system.tone.new_line then
-      render_tone(system.tone.tone_str, system.tone.start_sp)
+    -- Render tone group labels in the lyrics line
+    for _, event in ipairs(system.events) do
+      if event.type == "tone_group" and event.label ~= "" then
+        tex.sprint("\\hbox to 0pt{")
+        tex.sprint("\\hskip" .. math.floor(event.start_sp or 0) .. "sp")
+        tex.sprint("\\textcolor{red}{")
+        tex.sprint(-2, event.label)
+        tex.sprint("}\\hss}")
+      end
     end
 
     tex.sprint("\\hss}")
-
-    -- Add tone on new line if it doesn't fit
-    if system.tone and system.tone.new_line then
-      render_tone(system.tone.tone_str, system.tone.start_sp)
-    end
 
     if sys_idx < #systems then
       tex.sprint("\\vskip\\systemvskip")
