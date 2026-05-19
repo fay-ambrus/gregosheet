@@ -34,8 +34,15 @@ function gregosheet.measure_events(events)
   local std_width = gregosheet.measure_width_sp(gregosheet.std_delimiter_sequence, music_fontid)
 
   for _, event in ipairs(events) do
-    if event.type == "note" or event.type == "symbol" or event.type == "barline" or event.type == "delimiter" then
+    if event.type == "note" or event.type == "symbol" or event.type == "barline" then
       event.width_sp = gregosheet.measure_width_sp(event.glyph, music_fontid)
+    elseif event.type == "delimiter" then
+      if not event.fixed then
+        event.glyph = gregosheet.std_delimiter_sequence
+        event.width_sp = std_width
+      else
+        event.width_sp = gregosheet.measure_width_sp(event.glyph, music_fontid)
+      end
     elseif event.type == "clef" then
       event.value = event.glyph .. (event.key or "") .. "-"
       event.width_sp = gregosheet.measure_width_sp(event.value, music_fontid)
@@ -51,8 +58,7 @@ function gregosheet.measure_events(events)
       end
       event.width_sp = total
     elseif event.type == "piece_boundary" then
-      -- Naturals have width if present
-      event.width_sp = gregosheet.measure_width_sp(event.naturals or "", music_fontid)
+      event.width_sp = gregosheet.measure_width_sp(event.glyph or "", music_fontid)
     elseif event.type == "title" or event.type == "floating_text" then
       event.width_sp = 0  -- titles/floating text don't consume horizontal music space
     end

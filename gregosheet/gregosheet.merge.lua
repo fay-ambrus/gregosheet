@@ -1,22 +1,31 @@
 gregosheet = gregosheet or {}
 
 --- Extract leading symbols (clef + key sig) from a token list.
---- Consumes tokens from the front until a non-symbol is found.
+--- The first character of the first symbol is the clef glyph,
+--- remaining characters (same token or subsequent symbol tokens) are key sig.
 ---
 --- @param tokens table[]  Token list (modified in place)
---- @return string glyph  Clef glyph (first symbol char(s))
+--- @return string glyph  Clef glyph (first symbol character)
 --- @return string key  Key signature chars (remaining symbols)
 local function extract_leading_symbols(tokens)
   local glyph = ""
   local key = ""
-  local first = true
 
   while #tokens > 0 and tokens[1].type == "symbol" do
-    if first then
-      glyph = table.remove(tokens, 1).glyph
-      first = false
+    local token = table.remove(tokens, 1)
+    if glyph == "" then
+      -- First symbol token: first char is clef, rest is key
+      local first = true
+      for _, code in utf8.codes(token.glyph) do
+        if first then
+          glyph = utf8.char(code)
+          first = false
+        else
+          key = key .. utf8.char(code)
+        end
+      end
     else
-      key = key .. table.remove(tokens, 1).glyph
+      key = key .. token.glyph
     end
   end
 
@@ -63,11 +72,12 @@ function gregosheet.merge(parsed_pieces)
       else
         local _, new_key = extract_leading_symbols(tokens)
 
-        table.insert(events, {type = "delimiter", glyph = "-"})
+        table.insert(events, {type = "delimiter", glyph = "-", fixed = true})
 
         local naturals = ""
         if new_key ~= current_key then
           naturals = gregosheet.compute_naturals(current_key, new_key)
+          gregosheet.debug_print("MERGE: key change '" .. current_key .. "' -> '" .. new_key .. "' naturals='" .. naturals .. "'")
           current_key = new_key
         end
 
@@ -76,6 +86,7 @@ function gregosheet.merge(parsed_pieces)
           title = piece.title or "",
           new_key = new_key,
           naturals = naturals,
+          glyph = naturals .. gregosheet.delimiter_s .. new_key,  -- naturals + short delimiter + new key sig
         })
       end
 

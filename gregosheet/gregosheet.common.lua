@@ -20,7 +20,22 @@ gregosheet.tolerable_syllable_gap_sp = 73000
 
 -- Character classification patterns (GuidoHU)
 gregosheet.notes = "[ðñ0123456789öüó^qwertzuiopõúÝÞQWERTZUIOPÕÚÔasdfghjkléáûØÙASDFGHJKLÉÁÛ`íyxcvbnmzZŸ¡¢£¥¦©ª«¬àâãäåæćçèêëìîï\\][¨~‚ƒ…†‡ˆ‰Š‹Œ''Ç°±²³´µ¾¸¹×Ô]"
-gregosheet.recited_notes = "[[Ÿ¡¢£¥¦©ª«¬]"
+gregosheet.recited_notes = "[Ÿ¡¢£[¥¦©ª«¬]"
+
+-- Mapping from recited note glyph to corresponding normal (single) note glyph
+gregosheet.recited_to_normal = {
+  ["Ÿ"] = "1",
+  ["¡"] = "2",
+  ["¢"] = "3",
+  ["£"] = "4",
+  ["["] = "5",
+  ["¥"] = "6",
+  ["¦"] = "7",
+  ["©"] = "8",
+  ["ª"] = "9",
+  ["«"] = "ö",
+  ["¬"] = "ü",
+}
 gregosheet.delimiters = "[-_*]"
 gregosheet.symbols = "[sM>#&@{}<¿À÷øÍYXCVBNÈÊËÌÎÏÐÑÒßòôþùý\u{201c}\u{201d}\u{2022}\u{2013}\u{2014}\u{02dc}\u{2122}\u{0161}\u{203a}\u{0153}\u{00ba}\u{00bb}]"
 gregosheet.barlines = "[,.?:;¼ÿ®−§'\"+!%/=()ÖÜÓ]"
@@ -67,4 +82,5 @@ function gregosheet.init_delimiter_widths()
   gregosheet.w_s = gregosheet.measure_width_sp(gregosheet.delimiter_s, gregosheet.music_fontid)
   gregosheet.w_m = gregosheet.measure_width_sp(gregosheet.delimiter_m, gregosheet.music_fontid)
   gregosheet.w_l = gregosheet.measure_width_sp(gregosheet.delimiter_l, gregosheet.music_fontid)
+  gregosheet.debug_print("DELIMITERS: w_s=" .. gregosheet.w_s .. " w_m=" .. gregosheet.w_m .. " w_l=" .. gregosheet.w_l)
 end

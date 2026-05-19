@@ -47,8 +47,10 @@ end
 
 --- Widen a delimiter event to at least target_width_sp.
 local function widen_delimiter(event, target_width_sp)
+  gregosheet.debug_print("WIDEN: target=" .. target_width_sp .. " old_w=" .. event.width_sp)
   event.glyph = get_minimal_delimiter_over_distance(target_width_sp)
   event.width_sp = gregosheet.measure_width_sp(event.glyph, gregosheet.music_fontid)
+  gregosheet.debug_print("WIDEN: new_w=" .. event.width_sp .. " glyph=" .. event.glyph)
 end
 
 --- Find the last delimiter event before index `idx` (scanning backwards).
@@ -75,7 +77,8 @@ local function recompute_positions(events, from_idx, up_to_idx)
 end
 
 --- Compute the syllable's starting x-position under a note.
-local function compute_syllable_start(syl, note_event, note_x)
+local function compute_syllable_start(syl, note_event)
+  local note_x = note_event.start_sp
   if syl.width_sp > note_event.width_sp and not note_event.glyph:match(gregosheet.recited_notes) then
     return note_x + (note_event.width_sp / 2) - (syl.width_sp / 2)
   else
@@ -96,6 +99,7 @@ local function place_syllable(syl, event_idx, events, prev_syl, space_width_sp, 
   end
 
   local gap = syl.start_sp - prev_end
+  gregosheet.debug_print("PLACE: syl='" .. (syl.text or "") .. "' at " .. (syl.start_sp or 0) .. " prev='" .. (prev_syl.text or "") .. "' prev_end=" .. prev_end .. " gap=" .. gap)
   if gap < 0 then
     local delim_idx = find_preceding_delimiter(events, event_idx)
     if delim_idx then
@@ -104,7 +108,7 @@ local function place_syllable(syl, event_idx, events, prev_syl, space_width_sp, 
       music_cursor = recompute_positions(events, delim_idx, event_idx)
       -- Recompute syllable position after widening
       if events[event_idx].syllable_idx then
-        syl.start_sp = compute_syllable_start(syl, events[event_idx], events[event_idx].start_sp)
+        syl.start_sp = compute_syllable_start(syl, events[event_idx])
       else
         syl.start_sp = events[event_idx].start_sp
       end
@@ -115,22 +119,70 @@ local function place_syllable(syl, event_idx, events, prev_syl, space_width_sp, 
 end
 
 --- Justify the event stream on an infinite-width line.
+--- If from_index is provided, only recomputes from that event onward
+--- (using the previous event's end position as starting cursor).
 ---
 --- @param events table[]  Measured event list (note events have .syllable_idx)
 --- @param syllables table[]  Measured syllable list (comments interleaved)
+--- @param from_index number|nil  Start index (default 1 = full justify)
 --- @return table[]  events (with adjusted delimiter widths)
 --- @return table[]  syllables (with start_sp assigned, hyphens may be inserted)
-function gregosheet.justify(events, syllables)
+function gregosheet.justify(events, syllables, from_index, reset_prev)
   local space_width_sp = gregosheet.measure_width_sp(" ", gregosheet.lyrics_fontid)
   local hyphen_width_sp = gregosheet.measure_width_sp("-", gregosheet.lyrics_fontid)
 
+  from_index = from_index or 1
+
+  -- Determine starting state
   local music_cursor = 0
-  local prev_syl = nil  -- last placed syllable (for overlap detection)
-  local next_syl_to_place = 1  -- index into syllables for unplaced comments
+  local prev_syl = nil
+  local next_syl_to_place = 1
 
-  gregosheet.debug_print("JUSTIFY: " .. #events .. " events, " .. #syllables .. " syllables")
+  if from_index > 1 then
+    -- Start cursor from end of previous event
+    local prev_event = events[from_index - 1]
+    music_cursor = prev_event.start_sp + (prev_event.width_sp or 0)
+    -- Find prev_syl (unless reset — used after splits where nothing precedes on new line)
+    if not reset_prev then
+      for idx = 1, #syllables do
+        local s = syllables[idx]
+        if s.start_sp and s.text and s.text ~= "" and not s.is_hyphen then
+          if s.start_sp < music_cursor then
+            prev_syl = s
+          end
+        end
+      end
+    end
+    -- Find next_syl_to_place: first syllable index referenced by events at or after from_index
+    next_syl_to_place = #syllables + 1
+    for i = from_index, #events do
+      if events[i].syllable_idx then
+        next_syl_to_place = events[i].syllable_idx
+        break
+      end
+    end
+  end
 
-  for i, event in ipairs(events) do
+  gregosheet.debug_print("JUSTIFY: " .. #events .. " events, " .. #syllables .. " syllables, from=" .. from_index)
+
+  for i = from_index, #events do
+    local event = events[i]
+    -- Enforce fixed delimiters around barlines
+    if event.type == "barline" then
+      -- Delimiter before barline: force to "-"
+      if i > 1 and events[i - 1].type == "delimiter" then
+        local old_w = events[i - 1].width_sp
+        events[i - 1].glyph = "-"
+        events[i - 1].width_sp = gregosheet.measure_width_sp("-", gregosheet.music_fontid)
+        music_cursor = music_cursor + (events[i - 1].width_sp - old_w)
+      end
+      -- Delimiter after barline: force to "--"
+      if i < #events and events[i + 1].type == "delimiter" then
+        events[i + 1].glyph = "--"
+        events[i + 1].width_sp = gregosheet.measure_width_sp("--", gregosheet.music_fontid)
+      end
+    end
+
     event.start_sp = music_cursor
     music_cursor = music_cursor + (event.width_sp or 0)
 
@@ -154,12 +206,12 @@ function gregosheet.justify(events, syllables)
 
       -- Place the note's syllable
       local syl = syllables[event.syllable_idx]
-      syl.start_sp = compute_syllable_start(syl, event, event.start_sp)
+      syl.start_sp = compute_syllable_start(syl, event)
 
       -- Resolve overlap
       music_cursor = place_syllable(syl, i, events, prev_syl, space_width_sp, music_cursor)
       -- Recompute after potential widening
-      syl.start_sp = compute_syllable_start(syl, event, event.start_sp)
+      syl.start_sp = compute_syllable_start(syl, event)
 
       gregosheet.debug_print("JUSTIFY:   syl[" .. event.syllable_idx .. "] '" .. syl.text .. "' at " .. syl.start_sp .. " w=" .. syl.width_sp)
 
@@ -174,7 +226,7 @@ function gregosheet.justify(events, syllables)
               local needed = events[delim_idx].width_sp + hyphen_width_sp - gap
               widen_delimiter(events[delim_idx], needed)
               music_cursor = recompute_positions(events, delim_idx, i)
-              syl.start_sp = compute_syllable_start(syl, event, event.start_sp)
+              syl.start_sp = compute_syllable_start(syl, event)
             end
           end
 

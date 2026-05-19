@@ -33,6 +33,9 @@ function gregosheet.render(systems)
             tex.sprint(-2, gregosheet.delimiter_m)
           end
         end
+      elseif event.keysig_in_clef then
+        -- Key sig handled by clef — fill with delimiter characters
+        tex.sprint(-2, gregosheet.std_delimiter_sequence)
       elseif event.glyph then
         tex.sprint(-2, event.glyph)
       end

@@ -22,7 +22,7 @@
   require("gregosheet/gregosheet.main")
 }
 
-% Capture font IDs in Lua (once at load time)
+% Capture font IDs in Lua (deferred until document styles are loaded)
 \newfontfamily\MusicFont{GuidoHU.ttf}
 
 % Debug
@@ -31,11 +31,13 @@
   \gregosheetdebug
 \fi
 
-{\MusicFont\fontsize{\musicfontsize}{24}\selectfont
-  \directlua{gregosheet.music_fontid = font.current()}
-}
-{\lyricfont\fontsize{\lyricfontsize}{12}\selectfont
-  \directlua{gregosheet.lyrics_fontid = font.current()}
+\AtBeginDocument{%
+  {\MusicFont\fontsize{\musicfontsize}{24}\selectfont
+    \directlua{gregosheet.music_fontid = font.current()}
+  }%
+  {\lyricfont\fontsize{\lyricfontsize}{12}\selectfont
+    \directlua{gregosheet.lyrics_fontid = font.current()}
+  }%
 }
 
 % ============================================================
@@ -125,7 +127,7 @@
   \tl_clear:N \l_gregosheet_title_tl
   \tl_clear:N \l_gregosheet_piece_tone_tl
   \keys_set:nn { gregosheet/piece } { #1 }
-  \__gregosheet_add_piece:nnn { #2 } { #3 } { \tl_use:N \l_gregosheet_piece_tone_tl }
+  \__gregosheet_add_piece:eee { #2 } { #3 } { \tl_use:N \l_gregosheet_piece_tone_tl }
 }
 
 % ============================================================
