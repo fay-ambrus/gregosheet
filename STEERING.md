@@ -153,27 +153,45 @@ Both `music_fontid` and `lyrics_fontid` are captured via `\AtBeginDocument` usin
 
 ## File structure
 ```
-gregosheet.sty                  — LaTeX interface
-gregosheet/
-  gregosheet.common.lua         — constants, char tables, init helpers
-  gregosheet.keysig.lua         — accidentals, compute_naturals
-  gregosheet.syllabify.lua      — Hungarian syllabification for recited note splitting
-  gregosheet.parse.lua          — parse_melody, parse_lyrics (pure)
-  gregosheet.merge.lua          — combine pieces into event + syllable lists + tone_group
-  gregosheet.measure.lua        — attach width_sp (only font access)
-  gregosheet.justify.lua        — resolve overlaps, place lyrics (infinite line)
-  gregosheet.break.lua          — greedy line-breaking, pad interior lines, recited splitting
-  gregosheet.render.lua         — emit TeX hbox commands
-  gregosheet.main.lua           — orchestrator (calls pipeline in order)
-gregosheet-old/                 — reference copy of previous implementation
+gregosheet.sty              — LaTeX interface
+gregosheet.common.lua       — constants, char tables, init helpers
+gregosheet.keysig.lua       — accidentals, compute_naturals
+gregosheet.syllabify.lua    — Hungarian syllabification for recited note splitting
+gregosheet.parse.lua        — parse_melody, parse_lyrics (pure)
+gregosheet.merge.lua        — combine pieces into event + syllable lists + tone_group
+gregosheet.measure.lua      — attach width_sp (only font access)
+gregosheet.justify.lua      — resolve overlaps, place lyrics (infinite line)
+gregosheet.break.lua        — greedy line-breaking, pad interior lines, recited splitting
+gregosheet.render.lua       — emit TeX hbox commands
+gregosheet.main.lua         — orchestrator (calls pipeline in order)
+GuidoHU.ttf                 — music font (freely distributable, © Bali János)
+spec/                       — busted tests
+  spec_helper.lua           — module loader and TeX stubs
+  parse_spec.lua            — parse_melody / parse_lyrics tests
+.github/workflows/test.yml  — CI: runs tests on push/PR
 ```
 
-## Sheet data location
-- `ordo-cantus-officii/` — all sheet definitions using `\defsheet`
-- Tone definitions in a dedicated file (TBD, e.g. `ordo-cantus-officii/toni.tex`)
-- Main documents reference them via `\printsheet` or `\addsheet`
+## Testing
 
-## Build command
+Tests use [busted](https://lunarmodules.github.io/busted/) with Lua 5.3.
+
+```bash
+busted
 ```
-TEXINPUTS=".:./gregosheet:./gregosheet-psalm:" LUAINPUTS=".:./gregosheet:./gregosheet-psalm:" lualatex --shell-escape -interaction=nonstopmode -output-directory=out <file>.tex
+
+The `spec/spec_helper.lua` provides a custom package searcher for dotted filenames
+and stubs TeX-only globals (`texio`). Stages that don't touch the font system
+(parse, merge, justify, break, syllabify, keysig) are tested as pure Lua.
+
+## Usage as submodule
+
+In a document repo:
+```bash
+git submodule add https://github.com/fay-ambrus/gregosheet.git gregosheet
+ln -s gregosheet/gregosheet.sty gregosheet.sty
+```
+
+Build command:
+```
+TEXINPUTS=".:./gregosheet:" LUAINPUTS=".:./gregosheet:" lualatex --shell-escape -interaction=nonstopmode -output-directory=out <file>.tex
 ```
