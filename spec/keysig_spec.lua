@@ -1,0 +1,52 @@
+require("spec.spec_helper")
+
+describe("validate_key", function()
+  it("accepts empty key", function()
+    assert.has_no.errors(function()
+      gregosheet.validate_key("")
+    end)
+  end)
+
+  it("accepts all flats", function()
+    assert.has_no.errors(function()
+      gregosheet.validate_key("XB")
+    end)
+  end)
+
+  it("accepts all sharps", function()
+    assert.has_no.errors(function()
+      gregosheet.validate_key("ôţù")
+    end)
+  end)
+
+  it("errors on mixed sharps and flats", function()
+    assert.has_error(function()
+      gregosheet.validate_key("Ëø")
+    end, "Key signature mixes sharps and flats")
+  end)
+
+  it("errors on invalid character", function()
+    assert.has_error(function()
+      gregosheet.validate_key("XZ")
+    end, "Invalid key signature character: 'Z'")
+  end)
+end)
+
+describe("compute_key_signature", function()
+  it("returns new key when old is empty", function()
+    assert.are.equal("ô", gregosheet.compute_key_signature("", "ô"))
+  end)
+
+  it("returns new key when both have keys", function()
+    assert.are.equal("X", gregosheet.compute_key_signature("ô", "X"))
+  end)
+
+  it("returns naturals when new key is empty", function()
+    local result = gregosheet.compute_key_signature("ô", "")
+    assert.are.equal("º", result)
+  end)
+
+  it("returns empty when both are empty", function()
+    assert.are.equal("", gregosheet.compute_key_signature("", ""))
+  end)
+end)

@@ -22,21 +22,11 @@ function gregosheet.render(systems)
     -- Render music line
     tex.sprint("\\hbox{")
     tex.sprint("\\fontsize{\\musicfontsize}{24}\\selectfont\\MusicFont")
-    tex.sprint(-2, system.clef.value)
 
     for _, event in ipairs(system.events) do
-      if event.type == "tone_group" then
-        -- Render tone notes with tight "-" delimiters
-        for j, sub in ipairs(event.events) do
-          tex.sprint(-2, sub.glyph)
-          if j < #event.events then
-            tex.sprint(-2, gregosheet.delimiter_m)
-          end
-        end
-      elseif event.keysig_in_clef then
-        -- Key sig handled by clef — fill with delimiter characters
-        tex.sprint(-2, gregosheet.std_delimiter_sequence)
-      elseif event.glyph then
+      if event.type == "piece_boundary" then
+        tex.sprint(-2, event.glyph or "")
+      elseif event.type ~= "comment" and event.glyph and event.glyph ~= "" then
         tex.sprint(-2, event.glyph)
       end
     end
@@ -51,7 +41,7 @@ function gregosheet.render(systems)
       if syl.start_sp and syl.text ~= "" then
         tex.sprint("\\hbox to 0pt{")
         tex.sprint("\\hskip" .. math.floor(syl.start_sp) .. "sp")
-        if syl.comment or syl.text == "*" then
+        if syl.comment or syl.tone or syl.text == "*" then
           tex.sprint("\\textcolor{red}{")
           tex.sprint(-2, syl.text)
           tex.sprint("}")
@@ -59,17 +49,6 @@ function gregosheet.render(systems)
           tex.sprint(-2, syl.text)
         end
         tex.sprint("\\hss}")
-      end
-    end
-
-    -- Render tone group labels in the lyrics line
-    for _, event in ipairs(system.events) do
-      if event.type == "tone_group" and event.label ~= "" then
-        tex.sprint("\\hbox to 0pt{")
-        tex.sprint("\\hskip" .. math.floor(event.start_sp or 0) .. "sp")
-        tex.sprint("\\textcolor{red}{")
-        tex.sprint(-2, event.label)
-        tex.sprint("}\\hss}")
       end
     end
 

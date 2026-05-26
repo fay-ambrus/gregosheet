@@ -47,10 +47,8 @@ end
 
 --- Widen a delimiter event to at least target_width_sp.
 local function widen_delimiter(event, target_width_sp)
-  gregosheet.debug_print("WIDEN: target=" .. target_width_sp .. " old_w=" .. event.width_sp)
   event.glyph = get_minimal_delimiter_over_distance(target_width_sp)
   event.width_sp = gregosheet.measure_width_sp(event.glyph, gregosheet.music_fontid)
-  gregosheet.debug_print("WIDEN: new_w=" .. event.width_sp .. " glyph=" .. event.glyph)
 end
 
 --- Find the last delimiter event before index `idx` (scanning backwards).
@@ -66,7 +64,7 @@ local function find_preceding_delimiter(events, idx)
   return nil
 end
 
---- Recompute start_sp and music_cursor from a given index forward.
+--- Recompute start_sp from a given index forward up to up_to_idx.
 local function recompute_positions(events, from_idx, up_to_idx)
   local cursor = events[from_idx].start_sp + events[from_idx].width_sp
   for j = from_idx + 1, up_to_idx do
@@ -79,7 +77,12 @@ end
 --- Compute the syllable's starting x-position under a note.
 local function compute_syllable_start(syl, note_event)
   local note_x = note_event.start_sp
-  if syl.width_sp > note_event.width_sp and not note_event.glyph:match(gregosheet.recited_notes) then
+  if syl.tone then
+    return note_x
+  end
+  local glyph = note_event.glyph or ""
+  local is_recited = glyph ~= "" and gregosheet.code_in_array(utf8.codepoint(glyph), gregosheet.recited_notes_codes or {})
+  if syl.width_sp > (note_event.width_sp or 0) and not is_recited then
     return note_x + (note_event.width_sp / 2) - (syl.width_sp / 2)
   else
     return note_x
@@ -88,25 +91,23 @@ end
 
 --- Place a syllable, checking overlap with prev_syl. If overlap, widen delimiter.
 --- Returns the updated music_cursor.
-local function place_syllable(syl, event_idx, events, prev_syl, space_width_sp, music_cursor)
+local function place_syllable(syl, event_idx, events, prev_syl, music_cursor)
   if not prev_syl then
     return music_cursor
   end
 
   local prev_end = prev_syl.start_sp + prev_syl.width_sp
   if prev_syl.word_end then
-    prev_end = prev_end + space_width_sp
+    prev_end = prev_end + gregosheet.space_width_sp
   end
 
   local gap = syl.start_sp - prev_end
-  gregosheet.debug_print("PLACE: syl='" .. (syl.text or "") .. "' at " .. (syl.start_sp or 0) .. " prev='" .. (prev_syl.text or "") .. "' prev_end=" .. prev_end .. " gap=" .. gap)
   if gap < 0 then
     local delim_idx = find_preceding_delimiter(events, event_idx)
     if delim_idx then
       local needed = events[delim_idx].width_sp - gap
       widen_delimiter(events[delim_idx], needed)
       music_cursor = recompute_positions(events, delim_idx, event_idx)
-      -- Recompute syllable position after widening
       if events[event_idx].syllable_idx then
         syl.start_sp = compute_syllable_start(syl, events[event_idx])
       else
@@ -118,65 +119,41 @@ local function place_syllable(syl, event_idx, events, prev_syl, space_width_sp, 
   return music_cursor
 end
 
---- Justify the event stream on an infinite-width line.
---- If from_index is provided, only recomputes from that event onward
---- (using the previous event's end position as starting cursor).
+--- Justify events until the line overflows width_limit_sp.
+--- Places syllables, resolves overlaps, widens delimiters.
+--- Always starts from event 1 (break removes previous lines before calling).
 ---
---- @param events table[]  Measured event list (note events have .syllable_idx)
---- @param syllables table[]  Measured syllable list (comments interleaved)
---- @param from_index number|nil  Start index (default 1 = full justify)
---- @return table[]  events (with adjusted delimiter widths)
---- @return table[]  syllables (with start_sp assigned, hyphens may be inserted)
-function gregosheet.justify(events, syllables, from_index, reset_prev)
-  local space_width_sp = gregosheet.measure_width_sp(" ", gregosheet.lyrics_fontid)
-  local hyphen_width_sp = gregosheet.measure_width_sp("-", gregosheet.lyrics_fontid)
-
-  from_index = from_index or 1
-
-  -- Determine starting state
-  local music_cursor = 0
+--- @param events table[]  Measured event list
+--- @param syllables table[]  Measured syllable list
+--- @param width_limit_sp number  Line width limit (overflow threshold)
+--- @return number overflow_idx|nil  Index of the event that overflowed (nil if everything fits)
+--- @return number music_cursor  Current cursor position at end of justification
+function gregosheet.justify(events, syllables, width_limit_sp)
   local prev_syl = nil
-  local next_syl_to_place = 1
+  local music_cursor = 0
+  local last_clef = nil
+  local last_key = nil
 
-  if from_index > 1 then
-    -- Start cursor from end of previous event
-    local prev_event = events[from_index - 1]
-    music_cursor = prev_event.start_sp + (prev_event.width_sp or 0)
-    -- Find prev_syl (unless reset — used after splits where nothing precedes on new line)
-    if not reset_prev then
-      for idx = 1, #syllables do
-        local s = syllables[idx]
-        if s.start_sp and s.text and s.text ~= "" and not s.is_hyphen then
-          if s.start_sp < music_cursor then
-            prev_syl = s
-          end
-        end
-      end
-    end
-    -- Find next_syl_to_place: first syllable index referenced by events at or after from_index
-    next_syl_to_place = #syllables + 1
-    for i = from_index, #events do
-      if events[i].syllable_idx then
-        next_syl_to_place = events[i].syllable_idx
-        break
-      end
+  -- Find first syllable index
+  local next_syl_to_place = #syllables + 1
+  for i = 1, #events do
+    if events[i].syllable_idx then
+      next_syl_to_place = events[i].syllable_idx
+      break
     end
   end
 
-  gregosheet.debug_print("JUSTIFY: " .. #events .. " events, " .. #syllables .. " syllables, from=" .. from_index)
-
-  for i = from_index, #events do
+  for i = 1, #events do
     local event = events[i]
+
     -- Enforce fixed delimiters around barlines
     if event.type == "barline" then
-      -- Delimiter before barline: force to "-"
       if i > 1 and events[i - 1].type == "delimiter" then
         local old_w = events[i - 1].width_sp
         events[i - 1].glyph = "-"
         events[i - 1].width_sp = gregosheet.measure_width_sp("-", gregosheet.music_fontid)
         music_cursor = music_cursor + (events[i - 1].width_sp - old_w)
       end
-      -- Delimiter after barline: force to "--"
       if i < #events and events[i + 1].type == "delimiter" then
         events[i + 1].glyph = "--"
         events[i + 1].width_sp = gregosheet.measure_width_sp("--", gregosheet.music_fontid)
@@ -186,20 +163,26 @@ function gregosheet.justify(events, syllables, from_index, reset_prev)
     event.start_sp = music_cursor
     music_cursor = music_cursor + (event.width_sp or 0)
 
-    gregosheet.debug_print("JUSTIFY: [" .. i .. "] type=" .. event.type .. " glyph=" .. (event.glyph or "") .. " w=" .. (event.width_sp or 0) .. " cursor=" .. music_cursor .. " syl_idx=" .. (event.syllable_idx or "-"))
+    -- Track last piece_boundary clef/key
+    if event.type == "piece_boundary" then
+      last_clef = event.clef
+      last_key = event.key
+    end
+
+    -- Check overflow
+    if music_cursor > width_limit_sp then
+      return i, last_clef, last_key
+    end
 
     if event.syllable_idx then
-      -- Before placing this note's syllable, place any preceding comment syllables
+      -- Flush preceding comment syllables
       while next_syl_to_place < event.syllable_idx do
         local comment_syl = syllables[next_syl_to_place]
         if comment_syl.comment then
           comment_syl.start_sp = event.start_sp
-          music_cursor = place_syllable(comment_syl, i, events, prev_syl, space_width_sp, music_cursor)
-          if prev_syl then
-            comment_syl.start_sp = event.start_sp
-          end
+          music_cursor = place_syllable(comment_syl, i, events, prev_syl, music_cursor)
+          comment_syl.start_sp = event.start_sp
           prev_syl = comment_syl
-          gregosheet.debug_print("JUSTIFY:   comment '" .. comment_syl.text .. "' at " .. comment_syl.start_sp)
         end
         next_syl_to_place = next_syl_to_place + 1
       end
@@ -209,36 +192,44 @@ function gregosheet.justify(events, syllables, from_index, reset_prev)
       syl.start_sp = compute_syllable_start(syl, event)
 
       -- Resolve overlap
-      music_cursor = place_syllable(syl, i, events, prev_syl, space_width_sp, music_cursor)
-      -- Recompute after potential widening
+      music_cursor = place_syllable(syl, i, events, prev_syl, music_cursor)
       syl.start_sp = compute_syllable_start(syl, event)
 
-      gregosheet.debug_print("JUSTIFY:   syl[" .. event.syllable_idx .. "] '" .. syl.text .. "' at " .. syl.start_sp .. " w=" .. syl.width_sp)
+      -- Check overflow (music or lyrics)
+      local syl_right = syl.start_sp + syl.width_sp
+      if music_cursor > width_limit_sp or syl_right > width_limit_sp then
+        return i, last_clef, last_key
+      end
 
       -- Hyphenation
       if prev_syl and not prev_syl.word_end and syl.text ~= "" then
         local gap = syl.start_sp - (prev_syl.start_sp + prev_syl.width_sp)
-
         if gap > gregosheet.tolerable_syllable_gap_sp then
-          if gap < hyphen_width_sp then
+          if gap < gregosheet.hyphen_width_sp then
             local delim_idx = find_preceding_delimiter(events, i)
             if delim_idx then
-              local needed = events[delim_idx].width_sp + hyphen_width_sp - gap
+              local needed = events[delim_idx].width_sp + gregosheet.hyphen_width_sp - gap
               widen_delimiter(events[delim_idx], needed)
               music_cursor = recompute_positions(events, delim_idx, i)
               syl.start_sp = compute_syllable_start(syl, event)
             end
           end
-
-          local hyphen_pos = (prev_syl.start_sp + prev_syl.width_sp + syl.start_sp - hyphen_width_sp) / 2
-          table.insert(syllables, {
+          local hyphen_pos = (prev_syl.start_sp + prev_syl.width_sp + syl.start_sp - gregosheet.hyphen_width_sp) / 2
+          local insert_at = event.syllable_idx
+          table.insert(syllables, insert_at, {
             text = "-",
             start_sp = hyphen_pos,
-            width_sp = hyphen_width_sp,
+            width_sp = gregosheet.hyphen_width_sp,
             word_end = false,
             comment = false,
             is_hyphen = true,
           })
+          -- Fix up syllable_idx on all events pointing at or after insert_at
+          for _, ev in ipairs(events) do
+            if ev.syllable_idx and ev.syllable_idx >= insert_at then
+              ev.syllable_idx = ev.syllable_idx + 1
+            end
+          end
         end
       end
 
@@ -248,7 +239,6 @@ function gregosheet.justify(events, syllables, from_index, reset_prev)
       next_syl_to_place = event.syllable_idx + 1
 
     elseif event.type == "floating_text" then
-      -- \addtext: place as comment syllable at current position
       local syl = {
         text = event.text,
         start_sp = event.start_sp,
@@ -256,22 +246,13 @@ function gregosheet.justify(events, syllables, from_index, reset_prev)
         word_end = true,
         comment = true,
       }
-      -- Resolve overlap
-      music_cursor = place_syllable(syl, i, events, prev_syl, space_width_sp, music_cursor)
+      music_cursor = place_syllable(syl, i, events, prev_syl, music_cursor)
       syl.start_sp = event.start_sp
       table.insert(syllables, syl)
       prev_syl = syl
     end
   end
 
-  -- Place any remaining comment syllables at end
-  while next_syl_to_place <= #syllables do
-    local syl = syllables[next_syl_to_place]
-    if syl.comment and not syl.start_sp then
-      syl.start_sp = music_cursor
-    end
-    next_syl_to_place = next_syl_to_place + 1
-  end
-
-  return events, syllables
+  -- No overflow — everything fits
+  return nil, last_clef, last_key
 end

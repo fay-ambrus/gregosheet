@@ -1,35 +1,31 @@
 gregosheet = gregosheet or {}
 
 --- Extract leading symbols (clef + key sig) from a token list.
---- The first character of the first symbol is the clef glyph,
+--- The first character of the first symbol is the clef,
 --- remaining characters (same token or subsequent symbol tokens) are key sig.
 ---
 --- @param tokens table[]  Token list (modified in place)
---- @return string glyph  Clef glyph (first symbol character)
+--- @return string clef  Clef glyph (first symbol character)
 --- @return string key  Key signature chars (remaining symbols)
-local function extract_leading_symbols(tokens)
-  local glyph = ""
-  local key = ""
-
-  while #tokens > 0 and tokens[1].type == "symbol" do
-    local token = table.remove(tokens, 1)
-    if glyph == "" then
-      -- First symbol token: first char is clef, rest is key
-      local first = true
-      for _, code in utf8.codes(token.glyph) do
-        if first then
-          glyph = utf8.char(code)
-          first = false
-        else
-          key = key .. utf8.char(code)
-        end
-      end
-    else
-      key = key .. token.glyph
-    end
+function gregosheet.extract_leading_symbols(tokens)
+  if #tokens == 0 or tokens[1].type ~= "symbol" then
+    error("Melody must start with a clef character")
   end
 
-  return glyph, key
+  local first_token = table.remove(tokens, 1)
+  local clef_code = utf8.codepoint(first_token.glyph)
+  local clef = utf8.char(clef_code)
+
+  if not gregosheet.code_in_array(clef_code, gregosheet.clefs_codes) then
+    error("Invalid clef character: '" .. clef .. "'")
+  end
+
+  local key = utf8.len(first_token.glyph) > 1
+    and first_token.glyph:sub(utf8.offset(first_token.glyph, 2)) or ""
+
+  gregosheet.validate_key(key)
+
+  return clef, key
 end
 
 --- Merge multiple parsed pieces into a single event list and syllable list.
@@ -45,58 +41,39 @@ function gregosheet.merge(parsed_pieces)
   local events = {}
   local syllables = {}
 
-  local current_key = ""
+  local old_clef = ""
+  local old_key = ""
   local first_piece = true
 
   for _, piece in ipairs(parsed_pieces) do
-    -- Handle floating_text entries
-    if piece.type == "floating_text" then
-      table.insert(events, {type = "floating_text", text = piece.text})
+    if piece.type ~= "floating_text" then
+      local piece_melody_tokens = piece.melody_tokens or {}
+      local clef, key = gregosheet.extract_leading_symbols(piece_melody_tokens)
 
-    else
-      local tokens = {}
-      for _, t in ipairs(piece.melody_tokens) do
-        table.insert(tokens, {type = t.type, glyph = t.glyph})
-      end
+      table.insert(events, {
+        type = "piece_boundary",
+        title = piece.title or "",
+        glyph = gregosheet.compute_clef_change(old_clef, clef) .. gregosheet.compute_key_signature(old_key, key) .. "-",
+        clef = clef,
+        key = key
+      })
 
-      if first_piece then
-        local glyph, key = extract_leading_symbols(tokens)
-        current_key = key
-        table.insert(events, {type = "clef", glyph = glyph, key = key})
+      old_clef = clef
+      old_key = key
 
-        if piece.title and piece.title ~= "" then
-          table.insert(events, {type = "title", title = piece.title})
-        end
-
-        first_piece = false
+      -- Fix the leading delimiter or insert one if missing
+      if #piece_melody_tokens > 0 and piece_melody_tokens[1].type == "delimiter" then
+        piece_melody_tokens[1].glyph = "-"
+        piece_melody_tokens[1].fixed = true
       else
-        local _, new_key = extract_leading_symbols(tokens)
-
-        table.insert(events, {type = "delimiter", glyph = "-", fixed = true})
-
-        local naturals = ""
-        if new_key ~= current_key then
-          naturals = gregosheet.compute_naturals(current_key, new_key)
-          gregosheet.debug_print("MERGE: key change '" .. current_key .. "' -> '" .. new_key .. "' naturals='" .. naturals .. "'")
-          current_key = new_key
-        end
-
-        table.insert(events, {
-          type = "piece_boundary",
-          title = piece.title or "",
-          new_key = new_key,
-          naturals = naturals,
-          glyph = naturals .. gregosheet.delimiter_s .. new_key,  -- naturals + short delimiter + new key sig
-        })
+        table.insert(piece_melody_tokens, 1, {type = "delimiter", glyph = "-", fixed = true})
       end
 
       -- Pair this piece's syllables with its notes
       local piece_syllables = piece.lyric_syllables or {}
       local syl_idx = 1
 
-      for _, token in ipairs(tokens) do
-        table.insert(events, token)
-
+      for _, token in ipairs(piece_melody_tokens) do
         -- Determine if this event should consume a syllable
         local should_pair = false
         if token.type == "note" then
@@ -113,20 +90,29 @@ function gregosheet.merge(parsed_pieces)
         end
 
         if should_pair then
-          -- Flush comment syllables before the paired one
+          -- Flush comment syllables as events before the paired note
           while syl_idx <= #piece_syllables and piece_syllables[syl_idx].comment do
             table.insert(syllables, piece_syllables[syl_idx])
+            if #events == 0 or events[#events].type ~= "delimiter" then
+              table.insert(events, {type = "delimiter", glyph = "", fixed = true})
+            end
+            table.insert(events, {type = "comment", syllable_idx = #syllables, width_sp = 0, glyph = ""})
+            table.insert(events, {type = "delimiter", glyph = "", fixed = true})
             syl_idx = syl_idx + 1
           end
+        end
+
+        table.insert(events, token)
+
+        if should_pair then
 
           -- Pair next non-comment syllable with this event
-          if syl_idx <= #piece_syllables and not piece_syllables[syl_idx].comment then
+          if syl_idx <= #piece_syllables then
             table.insert(syllables, piece_syllables[syl_idx])
             token.syllable_idx = #syllables
             syl_idx = syl_idx + 1
           else
             table.insert(syllables, {text = "", word_end = true, comment = false})
-            token.syllable_idx = #syllables
           end
         end
       end
@@ -134,19 +120,48 @@ function gregosheet.merge(parsed_pieces)
       -- Flush remaining comment syllables at end of piece
       while syl_idx <= #piece_syllables and piece_syllables[syl_idx].comment do
         table.insert(syllables, piece_syllables[syl_idx])
+        if #events == 0 or events[#events].type ~= "delimiter" then
+          table.insert(events, {type = "delimiter", glyph = "", fixed = true})
+        end
+        table.insert(events, {type = "comment", syllable_idx = #syllables, width_sp = 0, glyph = ""})
+        table.insert(events, {type = "delimiter", glyph = "", fixed = true})
         syl_idx = syl_idx + 1
       end
 
       -- Insert tone_group after this piece's events (if tone provided)
       if piece.tone_melody and piece.tone_melody ~= "" then
         local tone_tokens = gregosheet.parse_melody(piece.tone_melody)
-        extract_leading_symbols(tone_tokens)
-        table.insert(events, {
-          type = "tone_group",
-          events = tone_tokens,
-          label = piece.tone_label or "",
-        })
+        gregosheet.extract_leading_symbols(tone_tokens)
+        local first_note = true
+        for _, t in ipairs(tone_tokens) do
+          if t.type == "delimiter" then
+            t.glyph = "-"
+            t.fixed = true
+          end
+          table.insert(events, t)
+          if t.type == "note" then
+            if first_note then
+              table.insert(syllables, {text = piece.tone_label or "", word_end = true, tone = true})
+              first_note = false
+            else
+              table.insert(syllables, {text = "", word_end = true, tone = true})
+            end
+            t.syllable_idx = #syllables
+          end
+        end
       end
+
+    else
+      table.insert(syllables, {text = piece.text, word_end = true, comment = true})
+      if #events == 0 or events[#events].type ~= "delimiter" then
+        table.insert(events, {type = "delimiter", glyph = "", fixed = true})
+      end
+      table.insert(events, {type = "comment", syllable_idx = #syllables, width_sp = 0, glyph = ""})
+      table.insert(events, {type = "delimiter", glyph = "", fixed = true})
+    end
+
+    if #syllables > 0 then
+      syllables[#syllables].word_end = true -- last syllable is always word end
     end
   end
 

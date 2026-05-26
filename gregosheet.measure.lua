@@ -43,24 +43,10 @@ function gregosheet.measure_events(events)
       else
         event.width_sp = gregosheet.measure_width_sp(event.glyph, music_fontid)
       end
-    elseif event.type == "clef" then
-      event.value = event.glyph .. (event.key or "") .. "-"
-      event.width_sp = gregosheet.measure_width_sp(event.value, music_fontid)
-    elseif event.type == "tone_group" then
-      -- Measure sub-events with tight "-" delimiters
-      local total = 0
-      for i, sub in ipairs(event.events) do
-        sub.width_sp = gregosheet.measure_width_sp(sub.glyph, music_fontid)
-        total = total + sub.width_sp
-        if i < #event.events then
-          total = total + gregosheet.w_m  -- tight "-" delimiter
-        end
-      end
-      event.width_sp = total
     elseif event.type == "piece_boundary" then
       event.width_sp = gregosheet.measure_width_sp(event.glyph or "", music_fontid)
     elseif event.type == "title" or event.type == "floating_text" then
-      event.width_sp = 0  -- titles/floating text don't consume horizontal music space
+      event.width_sp = 0
     end
   end
 end

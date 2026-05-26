@@ -37,54 +37,56 @@ function gregosheet.init_accidentals()
   end
 end
 
--- Compute naturals needed when changing key signature
-function gregosheet.compute_naturals(old_key_str, new_key_str)
+--- Validate that a key signature contains only sharps or only flats.
+function gregosheet.validate_key(key_str)
+  if key_str == "" then return end
   gregosheet.init_accidentals()
-
-  local old_sigs = {}
-  local new_sigs = {}
-  local old_type = nil
-  local new_type = nil
-
-  for _, code in utf8.codes(old_key_str) do
+  local has_sharp = false
+  local has_flat = false
+  for _, code in utf8.codes(key_str) do
     local char = utf8.char(code)
     local info = gregosheet.key_sig_chars[char]
-    if info then
-      old_type = info.type
-      old_sigs[info.position] = true
+    if not info then
+      error("Invalid key signature character: '" .. char .. "'")
     end
+    if info.type == "sharp" then has_sharp = true end
+    if info.type == "flat" then has_flat = true end
   end
-
-  for _, code in utf8.codes(new_key_str) do
-    local char = utf8.char(code)
-    local info = gregosheet.key_sig_chars[char]
-    if info then
-      new_type = info.type
-      new_sigs[info.position] = true
-    end
+  if has_sharp and has_flat then
+    error("Key signature mixes sharps and flats")
   end
+end
 
-  if old_type == nil then
+function gregosheet.compute_clef_change(old_clef_str, new_clef_str)
+  if old_clef_str == nil or old_clef_str == "" then
+    return new_clef_str
+  end
+  if old_clef_str == new_clef_str then
     return ""
   end
+  return new_clef_str
+end
 
-  local naturals_str = ""
-
-  if new_type == nil or old_type ~= new_type then
-    -- Type changed or going to none: naturalize ALL old positions
-    for pos, _ in pairs(old_sigs) do
-      if gregosheet.natural_chars[pos] then
-        naturals_str = naturals_str .. gregosheet.natural_chars[pos]
-      end
-    end
-  else
-    -- Same type: naturalize only removed positions
-    for pos, _ in pairs(old_sigs) do
-      if not new_sigs[pos] and gregosheet.natural_chars[pos] then
-        naturals_str = naturals_str .. gregosheet.natural_chars[pos]
-      end
-    end
+--- Compute the glyphs to display at a key signature change.
+--- If old is empty, return new key. If new is empty, return naturals of old.
+--- Otherwise return new key.
+function gregosheet.compute_key_signature(old_key_str, new_key_str)
+  if old_key_str == "" then
+    return new_key_str
   end
 
-  return naturals_str
+  if new_key_str == "" then
+    gregosheet.init_accidentals()
+    local naturals_str = ""
+    for _, code in utf8.codes(old_key_str) do
+      local char = utf8.char(code)
+      local info = gregosheet.key_sig_chars[char]
+      if info and gregosheet.natural_chars[info.position] then
+        naturals_str = naturals_str .. gregosheet.natural_chars[info.position]
+      end
+    end
+    return naturals_str
+  end
+
+  return new_key_str
 end

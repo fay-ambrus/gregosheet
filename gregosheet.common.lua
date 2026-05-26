@@ -13,6 +13,7 @@ end
 gregosheet.delimiter_s = "¨"
 gregosheet.delimiter_m = "-"
 gregosheet.delimiter_l = "_"
+gregosheet.delimiter_star = "*"
 gregosheet.std_delimiter_sequence = "---"
 
 -- Lyric gap tolerance (sp) — below this, no hyphen is inserted
@@ -37,7 +38,8 @@ gregosheet.recited_to_normal = {
   ["¬"] = "ü",
 }
 gregosheet.delimiters = "[-_*]"
-gregosheet.symbols = "[sM>#&@{}<¿À÷øÍYXCVBNÈÊËÌÎÏÐÑÒßòôþùý\u{201c}\u{201d}\u{2022}\u{2013}\u{2014}\u{02dc}\u{2122}\u{0161}\u{203a}\u{0153}\u{00ba}\u{00bb}]"
+gregosheet.symbols = "[sM>#&@{}<¿À÷øÍYXCVBNÈÊËÌÎÏÐÑÒßòôþùý“”•–—˜™š›œº»ą]"
+gregosheet.clefs = "[M>#&@{}<]"
 gregosheet.barlines = "[,.?:;¼ÿ®−§'\"+!%/=()ÖÜÓ]"
 
 -- Code arrays (populated on first use by parse)
@@ -45,6 +47,7 @@ gregosheet.notes_codes = {}
 gregosheet.delimiters_codes = {}
 gregosheet.symbols_codes = {}
 gregosheet.barlines_codes = {}
+gregosheet.clefs_codes = {}
 
 --- Convert a character class pattern string to an array of UTF-8 codepoints.
 function gregosheet.pattern_to_codes(pattern)
@@ -69,6 +72,8 @@ function gregosheet.init_codes()
   gregosheet.delimiters_codes = gregosheet.pattern_to_codes(gregosheet.delimiters)
   gregosheet.symbols_codes = gregosheet.pattern_to_codes(gregosheet.symbols)
   gregosheet.barlines_codes = gregosheet.pattern_to_codes(gregosheet.barlines)
+  gregosheet.clefs_codes = gregosheet.pattern_to_codes(gregosheet.clefs)
+  gregosheet.recited_notes_codes = gregosheet.pattern_to_codes(gregosheet.recited_notes)
 end
 
 -- Delimiter widths in sp (initialized lazily after font is available)
@@ -82,5 +87,8 @@ function gregosheet.init_delimiter_widths()
   gregosheet.w_s = gregosheet.measure_width_sp(gregosheet.delimiter_s, gregosheet.music_fontid)
   gregosheet.w_m = gregosheet.measure_width_sp(gregosheet.delimiter_m, gregosheet.music_fontid)
   gregosheet.w_l = gregosheet.measure_width_sp(gregosheet.delimiter_l, gregosheet.music_fontid)
+  gregosheet.w_star = gregosheet.measure_width_sp(gregosheet.delimiter_star, gregosheet.music_fontid)
+  gregosheet.space_width_sp = gregosheet.measure_width_sp(" ", gregosheet.lyrics_fontid)
+  gregosheet.hyphen_width_sp = gregosheet.measure_width_sp("-", gregosheet.lyrics_fontid)
   gregosheet.debug_print("DELIMITERS: w_s=" .. gregosheet.w_s .. " w_m=" .. gregosheet.w_m .. " w_l=" .. gregosheet.w_l)
 end

@@ -25,7 +25,6 @@ function gregosheet.main(pieces)
   end
 
   -- 2. Merge into single event list + syllable list
-  --    (tone_groups are inline events in the stream)
   local events, syllables = gregosheet.merge(parsed_pieces)
 
   -- 3. Measure (attach width_sp to events and syllables)
@@ -33,12 +32,9 @@ function gregosheet.main(pieces)
   gregosheet.measure_events(events)
   gregosheet.measure_syllables(syllables)
 
-  -- 4. Justify on infinite line (resolve overlaps, widen delimiters, place lyrics)
-  events, syllables = gregosheet.justify(events, syllables)
-
-  -- 5. Break into systems (greedy line-breaking, pad interior lines)
+  -- 4. Justify and break into systems (interleaved)
   local systems = gregosheet.break_into_systems(events, syllables)
 
-  -- 6. Render to TeX
+  -- 5. Render to TeX
   gregosheet.render(systems)
 end
