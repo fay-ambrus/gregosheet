@@ -155,6 +155,24 @@ describe("break", function()
       assert.are.equal(1, #result)
       assert.are.equal("Do-", result[1].text)
     end)
+
+    it("does not collect unreferenced syllables even if in index range", function()
+      local events = {
+        {type = "note", glyph = "1", syllable_idx = 1},
+        {type = "delimiter", glyph = "---"},
+        {type = "note", glyph = "2", syllable_idx = 4},
+      }
+      local syllables = {
+        {text = "a", start_sp = 0, word_end = true},
+        {text = "x", word_end = true},           -- unreferenced, no start_sp
+        {text = "y", start_sp = nil, word_end = true},  -- unreferenced, nil start_sp
+        {text = "b", start_sp = 400, word_end = true},
+      }
+      local result = gregosheet.collect_line_syllables(events, syllables, 3)
+      assert.are.equal(2, #result)
+      assert.are.equal("a", result[1].text)
+      assert.are.equal("b", result[2].text)
+    end)
   end)
 
   describe("find_recited_split_point", function()
@@ -255,7 +273,7 @@ describe("break", function()
     it("emits single system when everything fits", function()
       tex.dimen["textwidth"] = 2000
       local events = {
-        {type = "piece_boundary", glyph = "M-", clef = "M", key = "", width_sp = 200, title = ""},
+        {type = "piece_boundary", glyph = "M", clef = "M", key = "", width_sp = 100, title = ""},
         {type = "delimiter", glyph = "-", width_sp = 100, fixed = true},
         {type = "note", glyph = "1", width_sp = 100, syllable_idx = 1},
       }
@@ -264,6 +282,49 @@ describe("break", function()
       }
       local systems = gregosheet.break_into_systems(events, syllables)
       assert.are.equal(1, #systems)
+    end)
+
+    it("splits into two systems when content overflows", function()
+      tex.dimen["textwidth"] = 600
+      local events = {
+        {type = "piece_boundary", glyph = "M", clef = "M", key = "", width_sp = 100, title = ""},
+        {type = "delimiter", glyph = "---", width_sp = 300},
+        {type = "note", glyph = "1", width_sp = 100, syllable_idx = 1},
+        {type = "delimiter", glyph = "---", width_sp = 300},
+        {type = "note", glyph = "2", width_sp = 100, syllable_idx = 2},
+        {type = "delimiter", glyph = "---", width_sp = 300},
+        {type = "note", glyph = "3", width_sp = 100, syllable_idx = 3},
+      }
+      local syllables = {
+        {text = "a", width_sp = 100, word_end = true},
+        {text = "b", width_sp = 100, word_end = true},
+        {text = "c", width_sp = 100, word_end = true},
+      }
+      local systems = gregosheet.break_into_systems(events, syllables)
+
+      assert.are.equal(3, #systems)
+
+      assert.are.equal("piece_boundary", systems[1].events[1].type)
+      assert.are.equal("delimiter", systems[1].events[2].type)
+      assert.are.equal("note", systems[1].events[3].type)
+      assert.are.equal("delimiter", systems[1].events[4].type)
+
+      assert.is_true(systems[1].events[4].glyph:find("%*") ~= nil)
+
+      assert.are.equal("a", systems[1].syllables[1].text)
+
+      assert.are.equal("piece_boundary", systems[2].events[1].type)
+      assert.are.equal("note", systems[2].events[2].type)
+      assert.are.equal("delimiter", systems[2].events[3].type)
+
+      assert.is_true(systems[2].events[3].glyph:find("%*") ~= nil)
+
+      assert.are.equal("b", systems[2].syllables[1].text)
+
+      assert.are.equal("piece_boundary", systems[2].events[1].type)
+      assert.are.equal("note", systems[3].events[2].type)
+      
+      assert.are.equal("c", systems[3].syllables[1].text)
     end)
   end)
 end)

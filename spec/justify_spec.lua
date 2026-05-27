@@ -161,6 +161,21 @@ describe("justify", function()
     assert.are.equal("--", events[4].glyph)
   end)
 
+  it("does not enforce fixed delimiters when delimiters are already fixed", function()
+    local events = {
+      {type = "note", glyph = "1", width_sp = 100, syllable_idx = 1},
+      {type = "delimiter", glyph = "---", width_sp = 300, fixed = true},
+      {type = "barline", glyph = ".", width_sp = 100},
+      {type = "delimiter", glyph = "-", width_sp = 300, fixed = true},
+    }
+    local syllables = {
+      {text = "a", width_sp = 100, word_end = true},
+    }
+    gregosheet.justify(events, syllables, math.huge)
+    assert.are.equal("---", events[2].glyph)
+    assert.are.equal("-", events[4].glyph)
+  end)
+
   it("places comment centered under its zero-width event", function()
     local events = {
       {type = "note", glyph = "1", width_sp = 100, syllable_idx = 1},
@@ -195,10 +210,10 @@ end)
 
   it("returns last clef and key from piece boundaries", function()
     local events = {
-      {type = "piece_boundary", glyph = "MXB-", clef = "M", key = "XB", width_sp = 400, title = ""},
+      {type = "piece_boundary", glyph = "MXB", clef = "M", key = "XB", width_sp = 300, title = ""},
       {type = "delimiter", glyph = "-", width_sp = 100, fixed = true},
       {type = "note", glyph = "1", width_sp = 100, syllable_idx = 1},
-      {type = "piece_boundary", glyph = "N-", clef = "N", key = "", width_sp = 200, title = ""},
+      {type = "piece_boundary", glyph = "N", clef = "N", key = "", width_sp = 100, title = ""},
       {type = "delimiter", glyph = "-", width_sp = 100, fixed = true},
       {type = "note", glyph = "2", width_sp = 100, syllable_idx = 2},
     }

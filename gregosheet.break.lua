@@ -65,26 +65,32 @@ end
 ------------------------------------------------------------------------
 function gregosheet.collect_line_syllables(events, syllables, end_idx)
   local line_syllables = {}
-  local first_syllable_idx = math.huge
-  local last_syllable_idx = 0
 
+  -- Collect indices directly referenced by line events
+  local referenced = {}
   for i = 1, end_idx do
     if events[i].syllable_idx then
-      if events[i].syllable_idx < first_syllable_idx then
-        first_syllable_idx = events[i].syllable_idx
-      end
-      if events[i].syllable_idx > last_syllable_idx then
-        last_syllable_idx = events[i].syllable_idx
-      end
+      referenced[events[i].syllable_idx] = true
     end
   end
 
-  if last_syllable_idx == 0 then return line_syllables end
+  -- Find range for hyphens (between first and last referenced)
+  local first_idx = math.huge
+  local last_idx = 0
+  for idx in pairs(referenced) do
+    if idx < first_idx then first_idx = idx end
+    if idx > last_idx then last_idx = idx end
+  end
 
-  for i = first_syllable_idx, last_syllable_idx do
-    local copy = {}
-    for k, v in pairs(syllables[i]) do copy[k] = v end
-    table.insert(line_syllables, copy)
+  if last_idx == 0 then return line_syllables end
+
+  -- Collect referenced syllables + hyphens with start_sp in range
+  for i = first_idx, last_idx do
+    if referenced[i] or (syllables[i].is_hyphen and syllables[i].start_sp) then
+      local copy = {}
+      for k, v in pairs(syllables[i]) do copy[k] = v end
+      table.insert(line_syllables, copy)
+    end
   end
 
   if #line_syllables > 0 and not line_syllables[#line_syllables].word_end then
@@ -345,10 +351,21 @@ function gregosheet.break_into_systems(events, syllables)
       and overflow_event.glyph:match(gregosheet.recited_notes)
     then
       local syl = syllables[overflow_event.syllable_idx]
-      if syl and syl.text and syl.text:find(" ") then
+      if syl and syl.text then
+        gregosheet.debug_print("SPLIT BEFORE: overflow_idx=" .. overflow_idx .. " text='" .. syl.text .. "'")
+        for i, ev in ipairs(events) do
+          gregosheet.debug_print("  ev[" .. i .. "] " .. ev.type .. " glyph=" .. (ev.glyph or "") .. " syl_idx=" .. tostring(ev.syllable_idx or ""))
+        end
         local handled = gregosheet.handle_recited_split(
           events, syllables, overflow_idx, page_width_sp
         )
+        gregosheet.debug_print("SPLIT AFTER: handled=" .. tostring(handled))
+        for i, ev in ipairs(events) do
+          gregosheet.debug_print("  ev[" .. i .. "] " .. ev.type .. " glyph=" .. (ev.glyph or "") .. " syl_idx=" .. tostring(ev.syllable_idx or ""))
+        end
+        for i, s in ipairs(syllables) do
+          gregosheet.debug_print("  syl[" .. i .. "] '" .. (s.text or "") .. "' start_sp=" .. tostring(s.start_sp))
+        end
         if handled then
           for _, ev in ipairs(events) do ev.start_sp = nil end
           for _, s in ipairs(syllables) do s.start_sp = nil end

@@ -61,17 +61,19 @@ describe("merge", function()
 
         -- piece boundary1
         assert.are.equal("piece_boundary", events[1].type)
-        assert.are.equal("MXB-", events[1].glyph)
+        assert.are.equal("MXB", events[1].glyph)
         assert.are.equal("M", events[1].clef)
         assert.are.equal("XB", events[1].key)
         assert.are.equal("", events[1].title)
 
+        assert.are.equal("delimiter", events[8].type)
+
         -- piece boundary2
-        assert.are.equal("piece_boundary", events[8].type)
-        assert.are.equal("™œ-", events[8].glyph)
-        assert.are.equal("M", events[8].clef)
-        assert.are.equal("", events[8].key)
-        assert.are.equal("", events[8].title)
+        assert.are.equal("piece_boundary", events[9].type)
+        assert.are.equal("™œ", events[9].glyph)
+        assert.are.equal("M", events[9].clef)
+        assert.are.equal("", events[9].key)
+        assert.are.equal("", events[9].title)
     end)
 
     it("pairs syllables with notes", function()
@@ -126,12 +128,12 @@ describe("merge", function()
             {type = "floating_text", text = "T.P."},
             piece
         })
-        
-        assert.are.equal("delimiter", events[1].type)
-        assert.are.equal("comment", events[2].type)
-        assert.are.equal("T.P.", syllables[events[2].syllable_idx].text)
-        assert.are.equal("delimiter", events[3].type)
-        assert.are.equal("piece_boundary", events[4].type)
+
+        assert.are.equal("piece_boundary", events[1].type)
+        assert.are.equal("delimiter", events[2].type)
+        assert.are.equal("comment", events[3].type)
+        assert.are.equal("T.P.", syllables[events[3].syllable_idx].text)
+        assert.are.equal("delimiter", events[2].type)
     end)
 
     it("puts * under barlines", function()

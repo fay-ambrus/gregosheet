@@ -2,9 +2,12 @@ gregosheet = gregosheet or {}
 
 function gregosheet.render(systems)
   for sys_idx, system in ipairs(systems) do
-    texio.write_nl("RENDER sys " .. sys_idx .. ": " .. #system.syllables .. " syllables")
-    for si, syl in ipairs(system.syllables) do
-      texio.write_nl("  syl[" .. si .. "] text='" .. (syl.text or "") .. "' start_sp=" .. tostring(syl.start_sp))
+    gregosheet.debug_print("RENDER system " .. sys_idx .. ": " .. #system.events .. " events, " .. #system.syllables .. " syllables")
+    for i, ev in ipairs(system.events) do
+      gregosheet.debug_print("  ev[" .. i .. "] " .. ev.type .. " glyph=" .. (ev.glyph or ""))
+    end
+    for i, syl in ipairs(system.syllables) do
+      gregosheet.debug_print("  syl[" .. i .. "] '" .. (syl.text or "") .. "' start_sp=" .. tostring(syl.start_sp))
     end
     -- Render titles above music
     if system.titles and #system.titles > 0 then

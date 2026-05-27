@@ -44,19 +44,34 @@ function gregosheet.merge(parsed_pieces)
   local old_clef = ""
   local old_key = ""
   local first_piece = true
+  local pending_comment = nil
 
   for _, piece in ipairs(parsed_pieces) do
     if piece.type ~= "floating_text" then
       local piece_melody_tokens = piece.melody_tokens or {}
       local clef, key = gregosheet.extract_leading_symbols(piece_melody_tokens)
 
+      if not first_piece then
+        table.insert(events, {type = "delimiter", glyph = "-", fixed = true})
+      end
+      first_piece = false
+
       table.insert(events, {
         type = "piece_boundary",
         title = piece.title or "",
-        glyph = gregosheet.compute_clef_change(old_clef, clef) .. gregosheet.compute_key_signature(old_key, key) .. "-",
+        glyph = gregosheet.compute_clef_change(old_clef, clef) .. gregosheet.compute_key_signature(old_key, key),
         clef = clef,
         key = key
       })
+
+      --table.insert(events, {type = "delimiter", glyph = "-", fixed = true})
+
+      if pending_comment ~= nil then
+        table.insert(syllables, {text = pending_comment, word_end = true, comment = true})
+        table.insert(events, {type = "delimiter", glyph = "", fixed = true})
+        table.insert(events, {type = "comment", syllable_idx = #syllables, width_sp = 0, glyph = ""})
+      end
+      pending_comment = nil
 
       old_clef = clef
       old_key = key
@@ -152,17 +167,21 @@ function gregosheet.merge(parsed_pieces)
       end
 
     else
-      table.insert(syllables, {text = piece.text, word_end = true, comment = true})
-      if #events == 0 or events[#events].type ~= "delimiter" then
-        table.insert(events, {type = "delimiter", glyph = "", fixed = true})
-      end
-      table.insert(events, {type = "comment", syllable_idx = #syllables, width_sp = 0, glyph = ""})
-      table.insert(events, {type = "delimiter", glyph = "", fixed = true})
+      pending_comment = piece.text
     end
 
     if #syllables > 0 then
       syllables[#syllables].word_end = true -- last syllable is always word end
     end
+  end
+
+  -- Debug: log all events in order
+  for i, ev in ipairs(events) do
+    local extra = ""
+    if ev.glyph and ev.glyph ~= "" then extra = " glyph=" .. ev.glyph end
+    if ev.syllable_idx then extra = extra .. " syl=" .. ev.syllable_idx end
+    if ev.title and ev.title ~= "" then extra = extra .. " title=" .. ev.title end
+    gregosheet.debug_print("MERGE [" .. i .. "] " .. ev.type .. extra)
   end
 
   return events, syllables

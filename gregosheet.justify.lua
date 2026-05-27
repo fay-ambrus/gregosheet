@@ -148,13 +148,13 @@ function gregosheet.justify(events, syllables, width_limit_sp)
 
     -- Enforce fixed delimiters around barlines
     if event.type == "barline" then
-      if i > 1 and events[i - 1].type == "delimiter" then
+      if i > 1 and events[i - 1].type == "delimiter" and not events[i - 1].fixed then
         local old_w = events[i - 1].width_sp
         events[i - 1].glyph = "-"
         events[i - 1].width_sp = gregosheet.measure_width_sp("-", gregosheet.music_fontid)
         music_cursor = music_cursor + (events[i - 1].width_sp - old_w)
       end
-      if i < #events and events[i + 1].type == "delimiter" then
+      if i < #events and events[i + 1].type == "delimiter" and not events[i + 1].fixed then
         events[i + 1].glyph = "--"
         events[i + 1].width_sp = gregosheet.measure_width_sp("--", gregosheet.music_fontid)
       end
