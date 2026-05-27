@@ -267,6 +267,34 @@ describe("break", function()
       assert.is_not_nil(note3_idx)
       assert.are.equal(#events, note3_idx)
     end)
+
+    it("maintains correct syllable_idx references after split", function()
+      local events = {
+        {type = "note", glyph = "1", width_sp = 100, syllable_idx = 1, start_sp = 0},
+        {type = "delimiter", glyph = "---", width_sp = 300},
+        {type = "note", glyph = "Ÿ", width_sp = 100, syllable_idx = 2, start_sp = 400},
+        {type = "delimiter", glyph = "---", width_sp = 300},
+        {type = "note", glyph = "3", width_sp = 100, syllable_idx = 3, start_sp = 800},
+      }
+      local syllables = {
+        {text = "x", width_sp = 100, word_end = true},
+        {text = "Lorem_ipsum_dolor", width_sp = 2600, word_end = true},
+        {text = "y", width_sp = 100, word_end = true},
+      }
+      gregosheet.handle_recited_split(events, syllables, 3, 800)
+
+      assert.are.equal("x", syllables[1].text)
+      assert.is_not_nil(syllables[1].width_sp)
+
+      assert.are.equal("Lo", syllables[2].text)
+      assert.is_not_nil(syllables[2].width_sp)
+
+      assert.are.equal("rem ipsum dolor", syllables[3].text)
+      assert.is_not_nil(syllables[3].width_sp)
+
+      assert.are.equal("y", syllables[4].text)
+      assert.is_not_nil(syllables[4].width_sp)
+    end)
   end)
 
   describe("break_into_systems", function()

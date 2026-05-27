@@ -162,7 +162,8 @@ end
 ------------------------------------------------------------------------
 function gregosheet.handle_recited_split(events, syllables, recited_idx, width_limit_sp)
   local event = events[recited_idx]
-  local syl = syllables[event.syllable_idx]
+  local orig_syl_idx = event.syllable_idx
+  local syl = syllables[orig_syl_idx]
 
   local note_x = event.start_sp or 0
   local available = width_limit_sp - note_x
@@ -172,142 +173,128 @@ function gregosheet.handle_recited_split(events, syllables, recited_idx, width_l
 
   local normal_glyph = gregosheet.recited_to_normal[event.glyph] or event.glyph
   local normal_width = gregosheet.measure_width_sp(normal_glyph, gregosheet.music_fontid)
+  local chunk2_count = #syls - fit_count
 
-  -- Handle chunk1
-  local chunk1_end = recited_idx  -- will be updated if expanded
-  if fit_count >= 4 then
-    syl.text = text1
-    syl.width_sp = gregosheet.measure_width_sp(text1, gregosheet.lyrics_fontid)
-    syl.word_end = false
-  else
-    -- Expand chunk1 to individual notes
+  -- Modify chunk1 syllable in place (trim text)
+  syl.text = text1
+  syl.width_sp = gregosheet.measure_width_sp(text1, gregosheet.lyrics_fontid)
+  syl.word_end = false
+
+  -- If chunk1 < 4 syllables, expand the recited note to individual notes
+  if fit_count < 4 then
+    -- Replace the recited note with expanded individual notes
     table.remove(events, recited_idx)
     local insert_pos = recited_idx
-    for si = 1, fit_count do
-      if si > 1 then
-        table.insert(events, insert_pos, {
-          type = "delimiter", glyph = "-",
-          width_sp = gregosheet.measure_width_sp("-", gregosheet.music_fontid),
-        })
-        insert_pos = insert_pos + 1
-      end
+
+    -- Replace the original syllable with first expanded syllable
+    syl.text = syls[1].text
+    syl.width_sp = gregosheet.measure_width_sp(syls[1].text, gregosheet.lyrics_fontid)
+    syl.word_end = (fit_count == 1) and false or (syls[2] and syls[2].word_start or false)
+
+    -- Insert first note pointing to original syllable
+    table.insert(events, insert_pos, {
+      type = "note", glyph = normal_glyph,
+      width_sp = normal_width, syllable_idx = orig_syl_idx,
+    })
+    insert_pos = insert_pos + 1
+
+    -- Insert remaining chunk1 syllables (2..fit_count) right after orig_syl_idx
+    for si = 2, fit_count do
+      table.insert(events, insert_pos, {
+        type = "delimiter", glyph = gregosheet.std_delimiter_sequence,
+        width_sp = gregosheet.measure_width_sp(gregosheet.std_delimiter_sequence, gregosheet.music_fontid),
+      })
+      insert_pos = insert_pos + 1
+
       local is_word_end = (si == fit_count) and false or (syls[si + 1] and syls[si + 1].word_start or false)
-      table.insert(syllables, {
+      local new_syl_idx = orig_syl_idx + si - 1
+      table.insert(syllables, new_syl_idx, {
         text = syls[si].text,
         width_sp = gregosheet.measure_width_sp(syls[si].text, gregosheet.lyrics_fontid),
         word_end = is_word_end,
         comment = false,
       })
+      -- Fix syllable_idx for all events pointing >= new_syl_idx
+      for _, ev in ipairs(events) do
+        if ev.syllable_idx and ev.syllable_idx >= new_syl_idx and ev ~= events[insert_pos] then
+          ev.syllable_idx = ev.syllable_idx + 1
+        end
+      end
       table.insert(events, insert_pos, {
         type = "note", glyph = normal_glyph,
-        width_sp = normal_width, syllable_idx = #syllables,
+        width_sp = normal_width, syllable_idx = new_syl_idx,
       })
       insert_pos = insert_pos + 1
     end
-
-    -- Remove the original syllable
-    local orig_syl_idx = event.syllable_idx
-    table.remove(syllables, orig_syl_idx)
-    for _, ev in ipairs(events) do
-      if ev.syllable_idx and ev.syllable_idx > orig_syl_idx then
-        ev.syllable_idx = ev.syllable_idx - 1
-      end
-    end
-
-    -- Re-justify to see how many expanded notes actually fit
-    for _, ev in ipairs(events) do ev.start_sp = nil end
-    for _, s in ipairs(syllables) do s.start_sp = nil end
-    local new_overflow = gregosheet.justify(events, syllables, width_limit_sp)
-
-    if new_overflow then
-      -- Move overflowing expanded notes back to chunk2
-      local moved_back = 0
-      for i = new_overflow, insert_pos - 1 do
-        if i <= #events and events[i].type == "note" and events[i].glyph == normal_glyph then
-          moved_back = moved_back + 1
-        end
-      end
-      if moved_back > 0 then
-        fit_count = fit_count - moved_back
-        text2 = ""
-        for si = fit_count + 1, #syls do
-          if text2 ~= "" and syls[si].word_start then text2 = text2 .. " " end
-          text2 = text2 .. syls[si].text
-        end
-        for i = 1, moved_back do
-          if new_overflow <= #events then
-            local ev = events[new_overflow]
-            if ev.syllable_idx then
-              table.remove(syllables, ev.syllable_idx)
-              for _, e2 in ipairs(events) do
-                if e2.syllable_idx and e2.syllable_idx > ev.syllable_idx then
-                  e2.syllable_idx = e2.syllable_idx - 1
-                end
-              end
-            end
-            table.remove(events, new_overflow)
-          end
-          if new_overflow > 1 and events[new_overflow - 1] and events[new_overflow - 1].type == "delimiter" then
-            table.remove(events, new_overflow - 1)
-            new_overflow = new_overflow - 1
-          end
-        end
-      end
-    end
-    -- After expansion (and possible move-back), find last chunk1 event
-    chunk1_end = recited_idx
-    for i = recited_idx, #events do
-      if events[i].type == "note" and events[i].glyph == normal_glyph then
-        chunk1_end = i
-      elseif events[i].type ~= "delimiter" then
-        break
-      end
-    end
   end
 
-  -- Handle chunk2
-  local chunk2_count = #syls - fit_count
-  local chunk2_insert_pos = chunk1_end + 1
+  -- Insert chunk2 after chunk1
+  -- Find the position right after chunk1's last event
+  local chunk2_pos = recited_idx + 1
+  if fit_count < 4 then
+    -- chunk1 was expanded: skip past all the expanded events
+    chunk2_pos = recited_idx + fit_count * 2 - 1  -- notes + delimiters
+  end
 
-  table.insert(events, chunk2_insert_pos, {
+  -- Insert break delimiter
+  table.insert(events, chunk2_pos, {
     type = "delimiter", glyph = gregosheet.std_delimiter_sequence,
     width_sp = gregosheet.measure_width_sp(gregosheet.std_delimiter_sequence, gregosheet.music_fontid),
   })
-  chunk2_insert_pos = chunk2_insert_pos + 1
+  chunk2_pos = chunk2_pos + 1
 
+  -- Insert chunk2 syllable(s) right after chunk1's syllables
+  local chunk2_syl_start = orig_syl_idx + 1
+  if fit_count < 4 then
+    chunk2_syl_start = orig_syl_idx + fit_count
+  end
   if chunk2_count >= 4 then
-    table.insert(syllables, {
+    -- Single recited note for chunk2
+    table.insert(syllables, chunk2_syl_start, {
       text = text2,
       width_sp = gregosheet.measure_width_sp(text2, gregosheet.lyrics_fontid),
-      word_end = syl.word_end or true,
+      word_end = true,
       comment = false,
     })
-    table.insert(events, chunk2_insert_pos, {
+    -- Fix syllable_idx for events pointing >= chunk2_syl_start
+    for _, ev in ipairs(events) do
+      if ev.syllable_idx and ev.syllable_idx >= chunk2_syl_start then
+        ev.syllable_idx = ev.syllable_idx + 1
+      end
+    end
+    table.insert(events, chunk2_pos, {
       type = "note", glyph = event.glyph,
-      width_sp = event.width_sp, syllable_idx = #syllables,
+      width_sp = event.width_sp, syllable_idx = chunk2_syl_start,
     })
   else
     -- Expand chunk2 to individual notes
     for si = fit_count + 1, #syls do
       if si > fit_count + 1 then
-        table.insert(events, chunk2_insert_pos, {
-          type = "delimiter", glyph = "-",
-          width_sp = gregosheet.measure_width_sp("-", gregosheet.music_fontid),
+        table.insert(events, chunk2_pos, {
+          type = "delimiter", glyph = gregosheet.std_delimiter_sequence,
+          width_sp = gregosheet.measure_width_sp(gregosheet.std_delimiter_sequence, gregosheet.music_fontid),
         })
-        chunk2_insert_pos = chunk2_insert_pos + 1
+        chunk2_pos = chunk2_pos + 1
       end
-      local is_word_end = (si == #syls) and (syl.word_end or true) or (syls[si + 1] and syls[si + 1].word_start or false)
-      table.insert(syllables, {
+      local is_word_end = (si == #syls) or (syls[si + 1] and syls[si + 1].word_start or false)
+      local syl_insert_idx = chunk2_syl_start + (si - fit_count - 1)
+      table.insert(syllables, syl_insert_idx, {
         text = syls[si].text,
         width_sp = gregosheet.measure_width_sp(syls[si].text, gregosheet.lyrics_fontid),
         word_end = is_word_end,
         comment = false,
       })
-      table.insert(events, chunk2_insert_pos, {
+      -- Fix syllable_idx for events pointing >= syl_insert_idx
+      for _, ev in ipairs(events) do
+        if ev.syllable_idx and ev.syllable_idx >= syl_insert_idx then
+          ev.syllable_idx = ev.syllable_idx + 1
+        end
+      end
+      table.insert(events, chunk2_pos, {
         type = "note", glyph = normal_glyph,
-        width_sp = normal_width, syllable_idx = #syllables,
+        width_sp = normal_width, syllable_idx = syl_insert_idx,
       })
-      chunk2_insert_pos = chunk2_insert_pos + 1
+      chunk2_pos = chunk2_pos + 1
     end
   end
 
