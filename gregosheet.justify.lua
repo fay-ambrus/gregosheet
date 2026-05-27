@@ -191,14 +191,20 @@ function gregosheet.justify(events, syllables, width_limit_sp)
       local syl = syllables[event.syllable_idx]
       syl.start_sp = compute_syllable_start(syl, event)
 
-      -- Resolve overlap
-      music_cursor = place_syllable(syl, i, events, prev_syl, music_cursor)
-      syl.start_sp = compute_syllable_start(syl, event)
+      -- Resolve overlap (skip for tone syllables — they extend freely)
+      if not syl.tone then
+        music_cursor = place_syllable(syl, i, events, prev_syl, music_cursor)
+        syl.start_sp = compute_syllable_start(syl, event)
+      end
 
       -- Check overflow (music or lyrics)
       local syl_right = syl.start_sp + syl.width_sp
       if music_cursor > width_limit_sp or syl_right > width_limit_sp then
-        return i, last_clef, last_key
+        if syl.tone then
+          syl.tone_overflow = true
+        else
+          return i, last_clef, last_key
+        end
       end
 
       -- Hyphenation

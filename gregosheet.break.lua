@@ -107,7 +107,7 @@ function gregosheet.collect_line_titles(events, end_idx)
   local titles = {}
   for i = 1, end_idx do
     local ev = events[i]
-    if ev.type == "piece_boundary" and ev.title and ev.title ~= "" then
+    if ev.title and ev.title ~= "" then
       table.insert(titles, {
         title = ev.title,
         start_sp = ev.start_sp or 0,
@@ -152,6 +152,11 @@ function gregosheet.find_recited_split_point(syl_text, available_width)
       if text2 ~= "" and s.word_start then text2 = text2 .. " " end
       text2 = text2 .. s.text
     end
+  end
+
+  -- Append hyphen if split is mid-word
+  if not syls[fit_count + 1].word_start then
+    text1 = text1 .. "-"
   end
 
   return fit_count, text1, text2, syls
@@ -333,6 +338,8 @@ function gregosheet.break_into_systems(events, syllables)
 
     -- Step 2: handle recited note overflow
     local overflow_event = events[overflow_idx]
+    -- Step 2a: handle tone text overflow (split text only, never break notes)
+    -- Step 2: handle recited note overflow (tone overflow handled as post-break fixup)
     if overflow_event.type == "note"
       and overflow_event.syllable_idx
       and overflow_event.glyph:match(gregosheet.recited_notes)
@@ -380,6 +387,70 @@ function gregosheet.break_into_systems(events, syllables)
     if end_idx < 1 then
       end_idx = 1
       break_idx = 2
+    end
+
+    -- Post-break fixup: split overflowing tone texts
+    for i = 1, end_idx do
+      if events[i].syllable_idx then
+        local syl = syllables[events[i].syllable_idx]
+        if syl and syl.tone_overflow then
+          local note_x = events[i].start_sp or 0
+          local available = page_width_sp - note_x
+          local fit_count, text1, text2 = gregosheet.find_recited_split_point(syl.text, available)
+          if fit_count then
+            syl.text = text1
+            syl.width_sp = gregosheet.measure_width_sp(text1, gregosheet.lyrics_fontid)
+            syl.tone_overflow = nil
+            -- Find first tone note after break_idx and put text2 on it
+            local target_idx = break_idx
+            if events[target_idx] and events[target_idx].type == "delimiter" then
+              target_idx = target_idx + 1
+            end
+            for j = target_idx, #events do
+              if events[j].type == "note" and events[j].syllable_idx then
+                local next_syl = syllables[events[j].syllable_idx]
+                if next_syl and next_syl.tone and next_syl.text == "" then
+                  next_syl.text = text2
+                  next_syl.width_sp = gregosheet.measure_width_sp(text2, gregosheet.lyrics_fontid)
+                  break
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+
+    -- Post-break fixup: split overflowing titles
+    for i = 1, end_idx do
+      local ev = events[i]
+      if ev.type == "piece_boundary" and ev.title and ev.title ~= "" then
+        local title_start = ev.start_sp or 0
+        local title_width = gregosheet.measure_width_sp(ev.title, gregosheet.lyrics_fontid)
+        if title_start + title_width > page_width_sp then
+          local available = page_width_sp - title_start
+          local fit_count, text1, text2 = gregosheet.find_recited_split_point(ev.title, available)
+          if fit_count then
+            ev.title = text1
+            -- Put text2 on the first event after break_idx (next line's first token)
+            local target = break_idx + 1
+            if target <= #events then
+              if not events[target].title or events[target].title == "" then
+                events[target].title = text2
+              end
+            end
+          else
+            -- Can't split — move whole title to next line
+            local target = break_idx + 1
+            if target <= #events then
+              if not events[target].title or events[target].title == "" then
+                events[target].title = ev.title
+              end
+            end
+            ev.title = ""
+          end
+        end
+      end
     end
 
     -- Compute line width

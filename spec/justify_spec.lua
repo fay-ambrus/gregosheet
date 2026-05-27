@@ -206,6 +206,27 @@ describe("justify", function()
     gregosheet.justify(events, syllables, math.huge)
     assert.are.equal(200, syllables[2].start_sp)
   end)
+
+  it("tone syllable does not widen delimiters but following content avoids overlap", function()
+    local events = {
+      {type = "note", glyph = "1", width_sp = 100, syllable_idx = 1},
+      {type = "delimiter", glyph = "-", width_sp = 100, fixed = true},
+      {type = "note", glyph = "2", width_sp = 100, syllable_idx = 2},
+      {type = "delimiter", glyph = "---", width_sp = 300},
+      {type = "note", glyph = "3", width_sp = 100, syllable_idx = 3},
+    }
+    local syllables = {
+      {text = "a", width_sp = 100, word_end = true},
+      {text = "8. tónus", width_sp = 800, word_end = true, tone = true},
+      {text = "next", width_sp = 400, word_end = true},
+    }
+    gregosheet.justify(events, syllables, math.huge)
+    -- Tone doesn't widen the fixed delimiter before it
+    assert.are.equal(100, events[2].width_sp)
+    -- But following syllable "next" doesn't overlap with tone
+    local tone_end = syllables[2].start_sp + syllables[2].width_sp
+    assert.is_true(syllables[3].start_sp >= tone_end)
+  end)
 end)
 
   it("returns last clef and key from piece boundaries", function()

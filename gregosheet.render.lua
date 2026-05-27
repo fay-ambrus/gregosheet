@@ -9,6 +9,9 @@ function gregosheet.render(systems)
     for i, syl in ipairs(system.syllables) do
       gregosheet.debug_print("  syl[" .. i .. "] '" .. (syl.text or "") .. "' start_sp=" .. tostring(syl.start_sp))
     end
+    -- Wrap system (title + music + lyrics) in a vbox to keep them together
+    tex.sprint("\\vbox{")
+
     -- Render titles above music
     if system.titles and #system.titles > 0 then
       tex.sprint("\\hbox to 0pt{")
@@ -60,6 +63,7 @@ function gregosheet.render(systems)
     end
 
     tex.sprint("\\hss}")
+    tex.sprint("}")  -- close vbox
 
     if sys_idx < #systems then
       tex.sprint("\\vskip\\systemvskip")

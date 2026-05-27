@@ -189,7 +189,7 @@ describe("break", function()
       -- "Do_mi_nus" = 3 syllables, each 200sp (2 chars * 100), available = 250
       local fit_count, text1, text2 = gregosheet.find_recited_split_point("Dominus", 250)
       assert.are.equal(1, fit_count)
-      assert.are.equal("Do", text1)
+      assert.are.equal("Do-", text1)
       assert.are.equal("minus", text2)
     end)
 
@@ -219,7 +219,7 @@ describe("break", function()
       local result = gregosheet.handle_recited_split(events, syllables, 1, 1500)
       assert.is_true(result)
       assert.are.equal("Ÿ", events[1].glyph)
-      assert.are.equal("Lorem ipsum do", syllables[1].text)
+      assert.are.equal("Lorem ipsum do-", syllables[1].text)
     end)
 
     it("expands chunk1 to individual notes when < 4 syllables fit", function()
@@ -356,3 +356,38 @@ describe("break", function()
     end)
   end)
 end)
+
+  it("tone text overflow does not trigger early line break", function()
+    tex.dimen["textwidth"] = 1000
+    local events = {
+      {type = "piece_boundary", glyph = "M-", clef = "M", key = "", width_sp = 200, title = ""},
+      {type = "delimiter", glyph = "---", width_sp = 300},
+      {type = "note", glyph = "1", width_sp = 100, syllable_idx = 1},
+      {type = "delimiter", glyph = "-", width_sp = 100, fixed = true},
+      {type = "note", glyph = "2", width_sp = 100, syllable_idx = 2},
+      {type = "delimiter", glyph = "-", width_sp = 100, fixed = true},
+      {type = "note", glyph = "3", width_sp = 100, syllable_idx = 3},
+      {type = "delimiter", glyph = "---", width_sp = 300},
+      {type = "note", glyph = "4", width_sp = 100, syllable_idx = 4},
+      {type = "delimiter", glyph = "---", width_sp = 300},
+      {type = "note", glyph = "5", width_sp = 100, syllable_idx = 5},
+    }
+    local syllables = {
+      {text = "a", width_sp = 100, word_end = true},
+      {text = "8. szó tónus", width_sp = 1200, word_end = true, tone = true},
+      {text = "", width_sp = 0, word_end = true, tone = true},
+      {text = "b", width_sp = 100, word_end = true},
+      {text = "c", width_sp = 100, word_end = true},
+    }
+    local systems = gregosheet.break_into_systems(events, syllables)
+    -- Tone text is wide (1200) but should NOT cause an early break
+    -- The break should happen due to music overflow, not tone text
+    -- Notes 1,2,3 with tone should be on first line (tone extends freely)
+    assert.is_true(#systems >= 1)
+    -- First system should contain the tone note
+    local has_tone = false
+    for _, syl in ipairs(systems[1].syllables) do
+      if syl.tone then has_tone = true end
+    end
+    assert.is_true(has_tone)
+  end)
