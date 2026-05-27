@@ -2,6 +2,10 @@ gregosheet = gregosheet or {}
 
 function gregosheet.render(systems)
   for sys_idx, system in ipairs(systems) do
+    texio.write_nl("RENDER sys " .. sys_idx .. ": " .. #system.syllables .. " syllables")
+    for si, syl in ipairs(system.syllables) do
+      texio.write_nl("  syl[" .. si .. "] text='" .. (syl.text or "") .. "' start_sp=" .. tostring(syl.start_sp))
+    end
     -- Render titles above music
     if system.titles and #system.titles > 0 then
       tex.sprint("\\hbox to 0pt{")
