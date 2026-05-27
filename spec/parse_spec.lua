@@ -28,10 +28,10 @@ describe("parse_melody", function()
   end)
 
   it("recognizes double barlines", function()
-    local tokens = gregosheet.parse_melody("-,,-")
+    local tokens = gregosheet.parse_melody("-?,-")
     assert.are.equal(3, #tokens)
     assert.are.equal("barline", tokens[2].type)
-    assert.are.equal(",,", tokens[2].glyph)
+    assert.are.equal("?,", tokens[2].glyph)
   end)
 end)
 

@@ -137,7 +137,7 @@ describe("merge", function()
     end)
 
     it("puts * under barlines", function()
-        local piece = make_piece("MXB-1w-3r-,,-4f2-3r-.", "a-b * c-d")
+        local piece = make_piece("MXB-1w-3r-?,-4f2-3r-.", "a-b * c-d")
         local _, syllables = gregosheet.merge({piece})
 
         assert.are.equal(5, #syllables)
@@ -164,7 +164,7 @@ describe("merge", function()
 
     it("fixes tone delimiters to single dash", function()
         local events, _ = gregosheet.merge({
-            make_piece("M-12-,,", "a", {tone_melody = "M-7--7-6-7-5---4-.", tone_label = "x"})
+            make_piece("M-12-?,", "a", {tone_melody = "M-7--7-6-7-5---4-.", tone_label = "x"})
         })
         for _, e in ipairs(events) do
             if e.type == "delimiter" and e.fixed then
