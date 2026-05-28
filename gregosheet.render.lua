@@ -51,7 +51,7 @@ function gregosheet.render(systems)
       if syl.start_sp and syl.text ~= "" then
         tex.sprint("\\hbox to 0pt{")
         tex.sprint("\\hskip" .. math.floor(syl.start_sp) .. "sp")
-        if syl.comment or syl.tone or syl.text == "*" then
+        if syl.comment or syl.tone or syl.text == "*" or syl.text == "ANT." then
           tex.sprint("\\textcolor{red}{")
           tex.sprint(-2, syl.text)
           tex.sprint("}")
