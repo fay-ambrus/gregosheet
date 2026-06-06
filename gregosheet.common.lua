@@ -20,7 +20,7 @@ gregosheet.std_delimiter_sequence = "---"
 gregosheet.tolerable_syllable_gap_sp = 73000
 
 -- Character classification patterns (GuidoHU)
-gregosheet.notes = "[ðñ0123456789öüó^qwertzuiopõúÝÞQWERTZUIOPÕÚÔasdfghjkléáûØÙASDFGHJKLÉÁÛ`íyxcvbnmzZŸ¡¢£¥¦©ª«¬àâãäåæćçèêëìîï\\][¨~‚ƒ…†‡ˆ‰Š‹Œ''Ç°±²³´µ¾¸¹×Ô]"
+gregosheet.notes = "[ðñ0123456789öüó^qwertzuiopõúÝQWERTZUIOPÕÚÔasdfghjkléáûØÙASDFGHJKLÉÁÛ`íyxcvbnmzZŸ¡¢£¥¦©ª«¬àâãäåæćçèêëìîï\\][¨~‚ƒ„…†‡ˆ‰Š‹Œ''Ç°±²³´µ¾¸¹×Ô]"
 gregosheet.recited_notes = "[Ÿ¡¢£[¥¦©ª«¬]"
 
 -- Mapping from recited note glyph to corresponding normal (single) note glyph
