@@ -15,7 +15,7 @@ describe("validate_key", function()
 
   it("accepts all sharps", function()
     assert.has_no.errors(function()
-      gregosheet.validate_key("ôţù")
+      gregosheet.validate_key("ôþù")
     end)
   end)
 
