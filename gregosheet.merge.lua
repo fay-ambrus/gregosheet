@@ -101,6 +101,8 @@ function gregosheet.merge(parsed_pieces)
           end
           if peek <= #piece_syllables
             and (piece_syllables[peek].text == "*"
+            or piece_syllables[peek].text == "**"
+            or piece_syllables[peek].text == "***"
             or piece_syllables[peek].text == "ANT."
             or piece_syllables[peek].text == "†"
             or piece_syllables[peek].text == "+") then

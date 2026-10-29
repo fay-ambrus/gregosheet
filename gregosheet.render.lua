@@ -53,6 +53,8 @@ function gregosheet.render(systems)
         tex.sprint("\\hskip" .. math.floor(syl.start_sp) .. "sp")
         if syl.comment or syl.tone
           or syl.text == "*"
+          or syl.text == "**"
+          or syl.text == "***"
           or syl.text == "ANT."
           or syl.text == "†"
           or syl.text == "+" then
